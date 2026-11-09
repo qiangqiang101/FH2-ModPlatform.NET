@@ -574,9 +574,9 @@ FH2MOD_EXPORT int fh2mod_init(const FH2ModApi* api) {
     info.size             = api->api_version >= 6 ? sizeof info : offsetof(FH2ModInfo, description);
     info.name             = "Platform.NET";   // the MODS tab row; the DLL stays FH2DotNet.dll
     info.version          = FH2DOTNET_VERSION;
-    info.github_repo      = nullptr;
+    info.github_repo      = "qiangqiang101/FH2-ModPlatform.NET";
     info.platform_version = FH2MOD_PLATFORM_VERSION;
-    info.check_updates    = 0;
+    info.check_updates    = 1;
     info.description      = "Runs the mods written in C# and VB.NET (hosted .NET mods) from fh2-mods-dotnet. "
                             "They're listed under Hosted .NET mods below.";
     g_mod                 = api->register_mod(&info);
