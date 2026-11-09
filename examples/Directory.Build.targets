@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <ProjectReference Include="$(FH2SdkDir)FH2ModPlatform.csproj" />
+  </ItemGroup>
+  <Import Project="$(FH2SdkDir)build\FH2ModPlatform.targets" />
+</Project>

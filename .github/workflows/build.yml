@@ -1,0 +1,163 @@
+name: Build
+
+# Builds FH2 Mod Platform for .NET (scripts/build.sh) and runs its tests against the fake platform:
+#   - publishing a release builds it, attaches FH2ModPlatform.NET-<tag>.zip and the SDK's NuGet package to that
+#     release, and publishes the package to GitHub Packages (the tag has to match the version: see "Name the build")
+#   - every night (03:00 UTC), when there were commits since the last nightly, it builds and uploads the zip and
+#     the package as artifacts (the package as <version>-nightly.<date>)
+#   - "Run workflow" on the Actions tab does the same as a nightly, whenever asked (<version>-ci.<run>)
+#
+# Windows only: the NativeAOT example links with Visual Studio's C++ tools, which the windows runner has. The zip
+# ships the FH2 Mod Platform as DWrite.dll only (Azimuth 1.0.3 no longer loads d3dcompiler_47.dll).
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
+jobs:
+  build:
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+    env:
+      LLVM_MINGW_VERSION: "20260922"
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Anything new? (nightly)
+        id: fresh
+        run: |
+          # A nightly only builds when there were commits in the last day; a release or "Run workflow" always does.
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]] && [[ -z "$(git log --since='25 hours ago' --format=%H -1)" ]]; then
+            echo "No commits since the last nightly: nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Name the build
+        id: name
+        if: steps.fresh.outputs.build == 'true'
+        run: |
+          # The version is in two places: CMakeLists.txt (FH2DotNet.dll, Platform.NET's row) and the SDK's .csproj
+          # (the NuGet package). They have to agree, and a release's tag has to be that version.
+          cmake_version=$(sed -n 's/^project([^ ]* VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          sdk_version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/FH2ModPlatform/FH2ModPlatform.csproj | head -1)
+          echo "CMakeLists.txt: $cmake_version, FH2ModPlatform.csproj: $sdk_version"
+          if [[ "$cmake_version" != "$sdk_version" ]]; then
+            echo "::error::CMakeLists.txt says $cmake_version and FH2ModPlatform.csproj says $sdk_version: make them the same."
+            exit 1
+          fi
+          version=$cmake_version
+          case "$GITHUB_EVENT_NAME" in
+            release)
+              tag="${GITHUB_REF_NAME#[vV]}"
+              if [[ "$tag" != "$version" ]]; then
+                echo "::error::Release tag $GITHUB_REF_NAME doesn't match version $version; bump it first."
+                exit 1
+              fi
+              echo "name=FH2ModPlatform.NET-${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+              echo "package=${version}" >> "$GITHUB_OUTPUT"
+              ;;
+            schedule)
+              echo "name=FH2ModPlatform.NET-v${version}-nightly-$(date -u +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+              echo "package=${version}-nightly.$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "name=FH2ModPlatform.NET-v${version}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+              echo "package=${version}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.fresh.outputs.build == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Install llvm-mingw and Ninja
+        if: steps.fresh.outputs.build == 'true'
+        run: |
+          curl -fsSL "https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-x86_64.zip" -o llvm-mingw.zip
+          7z x -y -o/c/llvm-mingw-unpack llvm-mingw.zip >/dev/null
+          echo "$(cygpath -w /c/llvm-mingw-unpack/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-x86_64/bin)" >> "$GITHUB_PATH"
+          choco install ninja -y --no-progress
+          x86_64-w64-mingw32-clang --version 2>/dev/null | head -1 || true
+
+      - name: Build
+        if: steps.fresh.outputs.build == 'true'
+        run: |
+          x86_64-w64-mingw32-clang --version | head -1
+          ninja --version
+          # The NuGet package takes the build's version (a nightly's or a manual run's has a suffix).
+          export FH2_PACKAGE_VERSION="${{ steps.name.outputs.package }}"
+          scripts/build.sh
+
+      - name: Test
+        if: steps.fresh.outputs.build == 'true'
+        run: |
+          tests/check_layout.sh
+          tests/run_host_test.sh
+
+      - name: Stage the zip's contents
+        if: steps.fresh.outputs.build == 'true'
+        run: |
+          # Extracted into the Azimuth folder (next to azimuth.exe):
+          #   DWrite.dll                                    the FH2 Mod Platform
+          #   fh2-mods/FH2DotNet.dll, fh2-mods/dotnet/...   Platform.NET: hosted .NET mods, the SDK, scripts, the console
+          #   examples/                                     HelloMod, hosted and NativeAOT
+          #   sdk/FH2ModPlatform.<version>.nupkg            the SDK, for mod projects
+          set -e
+          cp README.md CHANGELOG.md dist/
+          if [ -e dist/d3dcompiler_47.dll ]; then echo "::error::d3dcompiler_47.dll must not ship"; exit 1; fi
+          (cd dist && find . -type f | sort)
+
+      - name: Zip
+        if: steps.fresh.outputs.build == 'true'
+        run: cd dist && 7z a -tzip -mx=9 "../${{ steps.name.outputs.name }}.zip" . >/dev/null
+
+      - name: Upload as an artifact
+        if: steps.fresh.outputs.build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'release' && 90 || 14 }}
+
+      - name: Attach to the release
+        if: steps.fresh.outputs.build == 'true' && github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.name.outputs.name }}.zip" dist/sdk/*.nupkg \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Publish the SDK package to GitHub Packages
+        if: steps.fresh.outputs.build == 'true' && github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget push "dist/sdk/*.nupkg" \
+            --source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json" \
+            --api-key "$GH_TOKEN" --skip-duplicate
+
+    permissions:
+      contents: write   # attaching the zip and the package to the release
+      packages: write   # publishing the SDK package

@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="..\..\examples\Directory.Build.targets" />
+</Project>

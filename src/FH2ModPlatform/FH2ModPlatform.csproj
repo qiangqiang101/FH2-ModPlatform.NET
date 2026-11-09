@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+    <RootNamespace>FH2ModPlatform</RootNamespace>
+
+    <!-- Hosted mods all share the host's copy of this assembly, so a mod built
+         against a newer SDK than the one installed fails to load with a clear
+         error. Bump AssemblyVersion only when the public API grows. -->
+    <Version>0.9.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+
+    <!-- FH2DotNet.dll starts the runtime from this assembly's runtimeconfig.json.
+         Major: a player with only a newer .NET runtime can still run mods. -->
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RollForward>Major</RollForward>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>FH2ModPlatform</PackageId>
+    <Authors>Bartholomew Ho</Authors>
+    <Description>Write Forza Horizon 2 mods for the FH2 Mod Platform in C#, as NativeAOT DLLs or hosted by FH2DotNet.dll.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- NuGet imports build files named after the package into every project that references it. -->
+    <None Include="build\FH2ModPlatform.props;build\FH2ModPlatform.targets" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+
+</Project>

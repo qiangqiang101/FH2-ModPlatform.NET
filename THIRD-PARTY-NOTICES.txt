@@ -1,0 +1,47 @@
+FH2 Mod Platform for .NET uses and ships the following third-party software.
+
+----------------------------------------------------------------------------------------------------
+FH2 Mod Platform (platform/, shipped as DWrite.dll and d3dcompiler_47.dll)
+https://github.com/Trinculo54/fh2-mod-platform
+MIT License: see LICENSE-FH2ModPlatform.txt.
+
+----------------------------------------------------------------------------------------------------
+MinHook (part of the FH2 Mod Platform)
+https://github.com/TsudaKageyu/minhook
+BSD 2-Clause License: see LICENSE-MinHook.txt.
+
+----------------------------------------------------------------------------------------------------
+Roslyn: Microsoft.CodeAnalysis, Microsoft.CodeAnalysis.CSharp, Microsoft.CodeAnalysis.VisualBasic 5.0.0
+(shipped in fh2-mods\dotnet\ as the script compiler's Microsoft.CodeAnalysis*.dll)
+https://github.com/dotnet/roslyn
+
+The MIT License (MIT)
+
+Copyright (c) .NET Foundation and Contributors
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Roslyn's own third-party notices are in ThirdPartyNotices-Roslyn.rtf.
+
+----------------------------------------------------------------------------------------------------
+.NET runtime (not shipped: players install it, or put one in fh2-mods\dotnet\runtime\)
+https://github.com/dotnet/runtime
+MIT License, Copyright (c) .NET Foundation and Contributors.

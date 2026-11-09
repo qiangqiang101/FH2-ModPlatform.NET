@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <FH2ModType>TestMod.TestMod</FH2ModType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\TestModHelper\TestModHelper.csproj" />
+  </ItemGroup>
+</Project>

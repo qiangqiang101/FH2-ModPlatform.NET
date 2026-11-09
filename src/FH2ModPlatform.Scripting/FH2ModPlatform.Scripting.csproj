@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The script compiler: Platform.NET loads it (and Roslyn with it) only when
+       fh2-mods-dotnet\scripts has .cs or .vb files. Not part of the SDK mods reference. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Copies Roslyn next to it on publish, with a deps.json for its load context. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Only the English compiler messages: no 13 language folders of resources. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Version>0.9.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+<Project>
+  <!-- Mods in this repo reference the SDK project directly, so they import its
+       build files here; a mod using the FH2ModPlatform NuGet package gets them
+       from the package and needs none of this. -->
+  <PropertyGroup>
+    <FH2SdkDir>$(MSBuildThisFileDirectory)..\src\FH2ModPlatform\</FH2SdkDir>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="$(FH2SdkDir)build\FH2ModPlatform.props" />
+  <!-- Put <FH2ModsDir>C:\path\to\Azimuth\fh2-mods</FH2ModsDir> in a
+       Directory.Build.props.user next to this file to copy builds into the game. -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.props.user" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.props.user')" />
+</Project>

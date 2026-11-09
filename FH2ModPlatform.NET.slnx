@@ -1,0 +1,31 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <!-- Mods as NativeAOT DLLs (Build makes the native DLL); everything else as Release. -->
+    <BuildType Name="Aot" />
+  </Configurations>
+  <Folder Name="/examples/">
+    <Project Path="examples/HelloMod/HelloMod.csproj" />
+    <Project Path="examples/ScriptDemo/ScriptDemo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FH2ModPlatform.Scripting/FH2ModPlatform.Scripting.csproj">
+      <BuildType Solution="Aot|*" Project="Debug" />
+    </Project>
+    <Project Path="src/FH2ModPlatform/FH2ModPlatform.csproj">
+      <BuildType Solution="Aot|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LayoutCheck/LayoutCheck.csproj">
+      <BuildType Solution="Aot|*" Project="Release" />
+    </Project>
+    <Project Path="tests/TestModHelper/TestModHelper.csproj">
+      <BuildType Solution="Aot|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/mods/">
+    <Project Path="tests/mods/TestMod/TestMod.csproj" />
+  </Folder>
+</Solution>

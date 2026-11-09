@@ -1,0 +1,7 @@
+<Project>
+  <!-- Test mods build like the examples, but never into a real game. -->
+  <Import Project="..\..\examples\Directory.Build.props" />
+  <PropertyGroup>
+    <FH2ModsDir></FH2ModsDir>
+  </PropertyGroup>
+</Project>

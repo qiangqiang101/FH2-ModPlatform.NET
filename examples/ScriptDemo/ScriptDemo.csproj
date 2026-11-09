@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <FH2ModType>ScriptDemo.ScriptDemo</FH2ModType>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>
