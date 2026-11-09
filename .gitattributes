@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts keep LF everywhere: Git Bash (and the Windows CI runner, which checks out with CRLF) fails on CRLF.
+*.sh text eol=lf
