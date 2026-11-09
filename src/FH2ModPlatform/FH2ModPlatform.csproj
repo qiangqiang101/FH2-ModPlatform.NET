@@ -24,8 +24,12 @@
 
     <PackageId>FH2ModPlatform</PackageId>
     <Authors>Bartholomew Ho</Authors>
-    <Description>Write Forza Horizon 2 mods for the FH2 Mod Platform in C#, as NativeAOT DLLs or hosted by FH2DotNet.dll.</Description>
+    <Description>Write Forza Horizon 2 mods for the FH2 Mod Platform in C# or VB.NET, as NativeAOT DLLs or hosted by FH2DotNet.dll.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/qiangqiang101/FH2-ModPlatform.NET</PackageProjectUrl>
+    <!-- GitHub Packages links the package to this repo through it (and GITHUB_TOKEN may only publish there). -->
+    <RepositoryUrl>https://github.com/qiangqiang101/FH2-ModPlatform.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
