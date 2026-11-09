@@ -12,8 +12,9 @@ namespace FH2;
 /// </summary>
 /// <remarks>
 /// Notifications show one at a time, about 5 seconds apart, while the HUD is up (driving);
-/// ones that can't show within 2 minutes are dropped. The game's HUD font is ASCII: other
-/// characters show as '?'. About 100 characters fit on a line.
+/// ones that can't show within 2 minutes are dropped. The text goes to the game as UTF-16, so
+/// any language shows if the HUD's font for the game's language has its characters (Chinese
+/// with the game in Chinese, say). About 100 characters fit on a line.
 /// </remarks>
 public static unsafe class UI
 {
@@ -41,7 +42,7 @@ public static unsafe class UI
         lock (s_lock)
         {
             if (s_queue.Count >= MaxQueued) s_queue.Dequeue();
-            s_queue.Enqueue(new Message(Ascii(title), Ascii(text), "", Environment.TickCount64));
+            s_queue.Enqueue(new Message(Clean(title), Clean(text), "", Environment.TickCount64));
         }
     }
 
@@ -55,13 +56,12 @@ public static unsafe class UI
         }
     }
 
-    private static string Ascii(string s)
+    // One line: control characters become spaces, and a long one is cut (never inside a character).
+    private static string Clean(string? s)
     {
-        var sb = new StringBuilder();
-        foreach (var r in s.EnumerateRunes())
-            sb.Append(r.Value < 0x20 ? ' ' : r.Value < 0x80 ? (char)r.Value : '?');
-        var t = sb.ToString();
-        return t.Length > MaxText ? t[..(MaxText - 3)] + "..." : t;
+        var runes = (s ?? "").EnumerateRunes().Select(r => r.Value < 0x20 ? new Rune(' ') : r).ToList();
+        if (runes.Count > MaxText) runes = [.. runes.Take(MaxText - 3), new('.'), new('.'), new('.')];
+        return string.Concat(runes);
     }
 
     // ---- Hooks: the component's life, and a tick on the game's thread ------------------------
@@ -93,7 +93,7 @@ public static unsafe class UI
             Addresses.Code[] code =
             [
                 Addresses.NotificationCtorAt, Addresses.NotificationDtorAt, Addresses.AchievementsTickAt,
-                Addresses.MakeDisplayString, Addresses.ShowNotification,
+                Addresses.MakeDisplayString, Addresses.SetDisplayStringWide, Addresses.ShowNotification,
             ];
             if (Game.Mismatch(b, code) is { } bad)
             {
@@ -168,12 +168,18 @@ public static unsafe class UI
         try
         {
             var make = (delegate* unmanaged<nint*, byte*, int, nint*>)(s_base + Addresses.MakeDisplayString.Offset);
+            var setWide = (delegate* unmanaged<nint, char*, int, void>)(s_base + Addresses.SetDisplayStringWide.Offset);
             var show = (delegate* unmanaged<nint, nint*, nint*, nint*, void>)(s_base + Addresses.ShowNotification.Offset);
             using var u = new Utf8Scope();
             nint title = 0, text = 0, icon = 0;
-            make(&title, u.Str(m.Title), -1);
-            make(&text, u.Str(m.Text), -1);
-            make(&icon, u.Str(m.Icon), -1);
+            // MakeDisplayString reads char* text as ANSI (CP_ACP), so the title and text are made empty and then
+            // set as UTF-16, which is what the string holds: every language comes through.
+            byte empty = 0;
+            make(&title, &empty, -1);
+            make(&text, &empty, -1);
+            fixed (char* t = m.Title) if (title != 0) setWide(title, t, -1);
+            fixed (char* t = m.Text) if (text != 0) setWide(text, t, -1);
+            make(&icon, u.Str(m.Icon), -1);   // an icon's name: ASCII
             show(component, &title, &text, &icon);   // takes the strings over
             s_lastShown = now;
         }

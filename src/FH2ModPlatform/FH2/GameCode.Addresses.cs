@@ -164,6 +164,11 @@ internal static partial class Addresses
     // void** MakeDisplayString(void** out, const char* text, int len = -1): a ref-counted display string
     // (allocated from the calling thread's game heap: game thread only).
     public static readonly Code MakeDisplayString = new("MakeDisplayString", 0x323310, "40 57 48 83 EC 30 48 C7 44 24 28 FE");
+    // The display string is UTF-16 inside ({vtable, wchar_t* buffer, uint capacity}), but MakeDisplayString's
+    // char* text goes through the char* setter (0x1246700): MultiByteToWideChar(CP_ACP), ANSI, not UTF-8.
+    // void SetDisplayStringWide(string, const wchar_t* text, int len = -1): its wchar_t* twin (wcsncpy_s), what
+    // the wchar_t* constructor (0x1239840) calls. It regrows the buffer from the game heap: game thread only.
+    public static readonly Code SetDisplayStringWide = new("SetDisplayStringWide", 0x12467B0, "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 20");
     // void ShowNotification(component, title*, text*, icon*): display strings by value (it releases them).
     public static readonly Code ShowNotification = new("ShowNotification", 0x755330, "4C 89 4C 24 20 4C 89 44 24 18 48 89");
 
