@@ -1,0 +1,45 @@
+<Project>
+  <!--
+    For FH2 mod projects (imported from the FH2ModPlatform package, or from a
+    Directory.Build.props when referencing the SDK project directly).
+
+    FH2ModHosting picks how the mod reaches the game:
+      Hosted (default)  dotnet build: a managed assembly for FH2DotNet.dll,
+                        in fh2-mods-dotnet\<Name>\ (next to fh2-mods)
+      Aot               dotnet publish -p:FH2ModHosting=Aot: a native DLL of its
+                        own with fh2mod_init, for fh2-mods\
+    It has to be a global property (-p:) or set in a Directory.Build.props,
+    since NativeAOT and the runtime identifier are decided before the project
+    file itself is read.
+
+    Or build the "Aot" configuration (Visual Studio's Debug/Release dropdown,
+    or -c Aot): it's FH2ModHosting=Aot with Release's optimisations, and Build
+    makes the native DLL too, no publish needed.
+  -->
+  <PropertyGroup>
+    <FH2ModHosting Condition="'$(FH2ModHosting)' == '' and '$(Configuration)' == 'Aot'">Aot</FH2ModHosting>
+    <FH2ModHosting Condition="'$(FH2ModHosting)' == ''">Hosted</FH2ModHosting>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Aot'">
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(FH2ModHosting)' == 'Aot'">
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <!-- The game's process isn't ours: no console, keep the DLL small. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(FH2ModHosting)' == 'Hosted'">
+    <!-- Copies dependencies next to the mod and writes its deps.json, for its load context. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+</Project>
