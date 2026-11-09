@@ -154,9 +154,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet nuget push "dist/sdk/*.nupkg" \
-            --source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json" \
-            --api-key "$GH_TOKEN" --skip-duplicate
+          # bash expands the name: dotnet on Windows doesn't match a quoted "dist/sdk/*.nupkg" itself.
+          shopt -s nullglob
+          packages=(dist/sdk/*.nupkg)
+          if (( ${#packages[@]} == 0 )); then echo "::error::no package in dist/sdk"; exit 1; fi
+          for package in "${packages[@]}"; do
+            dotnet nuget push "$package" \
+              --source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json" \
+              --api-key "$GH_TOKEN" --skip-duplicate
+          done
 
     permissions:
       contents: write   # attaching the zip and the package to the release
