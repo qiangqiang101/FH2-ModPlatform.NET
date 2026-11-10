@@ -2,6 +2,8 @@
 
 Write [FH2 Mod Platform](https://github.com/Trinculo54/fh2-mod-platform) mods for Forza Horizon 2 in C# or VB.NET. The SDK wraps the whole platform API (API 9, platform 2.8.0): game text, title-screen notices and entries, files, the game database, hooks, byte patches and instruction hooks, settings, pages, hotkeys, commands, sessions and crash dumps. On top of that, the `FH2` classes give you the game itself, without reverse engineering: `Player.Car.Repair()`, `World.Waypoint`, `UI.Notify(...)`, `ANNA.Items("Car").Add(...)` ([below](#the-game-the-fh2-classes)).
 
+[![Build](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml/badge.svg)](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml)
+
 > **0.9.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
 
 ## Requirements
