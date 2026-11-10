@@ -28,7 +28,14 @@ public static unsafe class UI
     private static readonly object s_lock = new();
     private static readonly Queue<Message> s_queue = new();
     private static readonly nint[] s_live = new nint[4];   // live notification components, newest last
+    // When each was made. The constructor hook fires as soon as the vtable is written, partway through building it,
+    // and a new HUD (after a teleport, entering an event) is still being put together: showing on a panel that new
+    // ended the game. A panel is only used once it's this old.
+    private static readonly Dictionary<nint, long> s_madeAt = [];
+    private const int SettleMs = 3000;
     private static long s_lastShown;
+    private static bool s_toldWaiting;
+    private static int s_shown;
     private static volatile bool s_started, s_ready;
 
     /// <summary>
@@ -135,6 +142,7 @@ public static unsafe class UI
             if (Array.IndexOf(s_live, c) >= 0) return;
             Array.Copy(s_live, 1, s_live, 0, s_live.Length - 1);
             s_live[^1] = c;
+            s_madeAt[c] = Environment.TickCount64;
         }
     }
 
@@ -144,6 +152,7 @@ public static unsafe class UI
         var c = (nint)ctx->Rbx;
         lock (s_lock)
         {
+            s_madeAt.Remove(c);
             int i = Array.IndexOf(s_live, c);
             if (i < 0) return;
             Array.Copy(s_live, 0, s_live, 1, i);
@@ -160,9 +169,33 @@ public static unsafe class UI
         nint component;
         lock (s_lock)
         {
-            while (s_queue.Count > 0 && now - s_queue.Peek().Queued > KeepForMs) s_queue.Dequeue();
-            component = s_live[^1];
-            if (s_queue.Count == 0 || component == 0) return;
+            while (s_queue.Count > 0 && now - s_queue.Peek().Queued > KeepForMs)
+            {
+                var old = s_queue.Dequeue();
+                Log(ModPlatform.GameOwner, $"UI.Notify: \"{old.Title}\" dropped: no notification panel to show it on within {KeepForMs / 1000} s");
+            }
+            if (s_queue.Count == 0) return;
+            // The newest panel still alive. The HUD can go (an event starting, say) without its panel's destructor
+            // running, so each is checked before use: still mapped, still a notification panel. Showing on one
+            // that's gone would end the game.
+            while (true)
+            {
+                component = s_live[^1];
+                if (component == 0)
+                {
+                    if (!s_toldWaiting) Log(ModPlatform.GameOwner, "UI.Notify: waiting for the HUD's notification panel (it's made with the HUD)");
+                    s_toldWaiting = true;
+                    return;
+                }
+                if (GameCode.TryRead<nint>(component, out var vt) && vt == s_base + Addresses.NotificationVtable) break;
+                s_madeAt.Remove(component);
+                Array.Copy(s_live, 0, s_live, 1, s_live.Length - 1);   // forget it
+                s_live[0] = 0;
+                Log(ModPlatform.GameOwner, "UI.Notify: a notification panel went away without its destructor; using the one before it, if any");
+            }
+            if (s_madeAt.TryGetValue(component, out var made) && now - made < SettleMs) return;   // the HUD is still being built
+            if (Game.IsReady && !Game.IsDriving) return;   // loading, a menu, an intro: shown once you drive
+            s_toldWaiting = false;
             m = s_queue.Dequeue();
         }
         try
@@ -182,6 +215,7 @@ public static unsafe class UI
             make(&icon, u.Str(m.Icon), -1);   // an icon's name: ASCII
             show(component, &title, &text, &icon);   // takes the strings over
             s_lastShown = now;
+            if (s_shown++ < 5) Log(ModPlatform.GameOwner, $"UI.Notify: showed \"{m.Title}\"");
         }
         catch (Exception e)
         {

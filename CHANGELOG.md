@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.10.0 (preview)
+
+### New
+- **`Skills`:** how soon the game can award Wreckage, Lumberjack or Sideswipe again (`Skills.SetRetriggerDelay`), set as the game starts.
+- **`GameCode`, for game data that may be gone:**
+  - Reads that can't crash: `TryRead`, `ReadSafe`, `ReadPointerSafe`, `ReadInt32Safe`, `ReadSingleSafe`, `IsReadable`. .NET can't recover from an access violation, so one bad pointer read raw ends the game.
+  - `ReadStdString`: the game's `std::string`.
+  - `MatchesBuild` and `SlotMatchesBuild`: check code before hooking it, even where another mod has hooked it first (they read the game's exe on disk). `ShippedBytes` gives those bytes.
+- **`Mod.Reloadable`:** a mod that can't be swapped while the game runs returns false. A reload (A on the Hosted .NET mods page, the reload key, `reload`, auto-reload) then leaves it running and says a restart is needed, instead of switching it off.
+- **Update notices for Platform.NET:** the title screen says when a newer release is out.
+
+### Fixed
+- **`UI.Notify` crashed the game** when the HUD was rebuilt (a teleport, starting an event):
+  - It could show on a notification panel that had gone, or on a new one the game was still building.
+  - Notifications now wait until the panel has settled and you're driving.
+  - `platform.log` says when one shows, waits or is dropped.
+- **`UI.Notify` shows any language** (the text goes to the game as UTF-16). Characters outside ASCII showed as `?`.
+
+### Changed
+- **The SDK's assembly version is 1.1.0.0:** the API grew. A mod built against 0.10.0 needs Platform.NET 0.10.0 or later installed, and says so if it isn't.
+
 ## 0.9.0 (preview)
 
 The first release.

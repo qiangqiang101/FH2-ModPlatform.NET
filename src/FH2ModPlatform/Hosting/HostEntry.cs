@@ -342,6 +342,12 @@ public static unsafe partial class HostEntry
             return $"{e.Name}: unloaded";
         }
         if (e is null) s_mods[present] = e = new Entry(present, found.Script);
+        // A mod that can't be swapped while the game runs keeps running as it is.
+        if (e.Mod is { Reloadable: false })
+        {
+            Log($"{e.Name} can't be reloaded while the game runs: it keeps running, and a new build starts with the next launch");
+            return $"{e.Name}: can't be reloaded while the game runs (restart the game for a new build)";
+        }
         e.Script = found.Script;
 
         var isNew = e.Mod is null && e.Loads == 0;

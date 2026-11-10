@@ -11,8 +11,8 @@
     <!-- Hosted mods all share the host's copy of this assembly, so a mod built
          against a newer SDK than the one installed fails to load with a clear
          error. Bump AssemblyVersion only when the public API grows. -->
-    <Version>0.9.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Version>0.10.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
 
     <!-- FH2DotNet.dll starts the runtime from this assembly's runtimeconfig.json.
          Major: a player with only a newer .NET runtime can still run mods. -->

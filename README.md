@@ -4,7 +4,7 @@ Write [FH2 Mod Platform](https://github.com/Trinculo54/fh2-mod-platform) mods fo
 
 [![Build](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml/badge.svg)](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml)
 
-> **0.9.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
+> **0.10.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
 
 ## Requirements
 
@@ -44,7 +44,7 @@ public sealed class MyMod : Mod
     <FH2ModType>MyMod.MyMod</FH2ModType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FH2ModPlatform" Version="0.9.0" />
+    <PackageReference Include="FH2ModPlatform" Version="0.10.0" />
   </ItemGroup>
 </Project>
 ```
@@ -56,6 +56,9 @@ VB.NET mods work in both modes. Set `<FH2ModType>` to the full class name, inclu
 - The build gives VB NativeAOT mods the SDK's own `fh2mod_init`. It finds your class through `[assembly: ModEntry]` and keeps your assembly's metadata for that, so the DLL comes out somewhat larger.
 - Hooks take delegates: `HookFunction(name, address, New MyFn(AddressOf MyDetour))`. Call the code you replaced with `hook.Original.Invoke(...)`.
 - `GameCode` reads game memory, checks code bytes (`GameCode.Matches(addr, GameCode.Hex("48 8B ..."))`) and turns addresses into callable delegates.
+  - Reads that can't crash (`TryRead`, `ReadSafe`, `ReadPointerSafe`, `IsReadable`) for game data that may be gone: .NET can't recover from an access violation, so one bad pointer read raw ends the game.
+  - `MatchesBuild` and `SlotMatchesBuild` check code that another mod may have hooked too, against the game's exe on disk.
+  - `ReadStdString` reads the game's `std::string`.
 - `SetFile` and `PatchBytes` have `Byte()` overloads.
 
 [tests/scripts/HiScript.vb](tests/scripts/HiScript.vb) is a VB.NET script, and the [Scripts](#scripts-cs-and-vb-files-no-project) section has another.
@@ -89,6 +92,7 @@ If World.Waypoint IsNot Nothing Then Player.TeleportTo(World.Waypoint.Value)
 | `MapView`, `PhotoCamera`, `GarageCamera` | The map's cursor, camera and zoom; photo mode's sticks; the garage camera's distance |
 | `ButtonIcons`, `Picture` | The controller's button pictures shown as your own; PNGs made into game textures |
 | `SettingsTile` | A tile of your own on Pause > Settings, opening your mod's rows |
+| `Skills` | How soon the game can award Wreckage, Lumberjack or Sideswipe again (`SetRetriggerDelay`) |
 | `DebugOverlay` | Lines of text over the game, for watching values while you drive |
 
 Most of them are for the game's thread (`Game.Tick`, `Game.Run`) or the UI thread (`Menus.Frame`). Each says which in its documentation, and calling one from the wrong thread throws and says where to call it from.
@@ -176,6 +180,8 @@ A reload loads the new DLL into a fresh load context. Mods are read into memory,
 
 The platform can't remove what a mod added. So settings, pages, title entries, hotkeys and commands that the new copy adds **with the same key** keep their place and now call the new code. Anything it adds for the first time shows from the next launch. Anything it no longer adds stays until the game restarts and does nothing. Text and database edits always take effect at the next launch, because the game reads them once.
 
+A mod that can't be swapped mid-game (one that changes the game as it loads, say) overrides `Reloadable` to return false: a reload then leaves it running and says a restart is needed.
+
 The old copy stays in memory until the game closes. A game thread might still be inside one of its detours, so unloading it could crash the game. That's a little memory per reload, so reloading is for development, not for players.
 
 ```csharp
@@ -236,10 +242,10 @@ Everything you need is on `Mod` (per mod) and `ModPlatform` (process-wide). Each
 
 ## Known issues
 
-0.9.0 is a preview. Known so far:
+0.10.0 is a preview. Known so far:
 
 - **A replay after a race crashed the game once**, with several mods installed. It isn't known yet whether the SDK was to blame.
-- **Not tested much in the game yet:** `Camera.Shake`, `Hud.SetGaugeItem`, `DebugOverlay`, `Game.Rewound` and `CarRelocated`, `MapView`, `PhotoCamera`, `GarageCamera`, `Garage.AddCar`, `GameInput.PlayWithoutController`, and nitro on Drivatars' cars (`Vehicle.ExhaustFlames` on other cars). They're built from what other mods found and checked against the game's code, but may not behave as described.
+- **Not tested much in the game yet:** `Camera.Shake`, `Hud.SetGaugeItem`, `DebugOverlay`, `Game.Rewound` and `CarRelocated`, `MapView`, `PhotoCamera`, `GarageCamera`, `Garage.Add`, `GameInput.PlayWithoutController`, and nitro on Drivatars' cars (`Vehicle.ExhaustFlames` on other cars). They're built from what other mods found and checked against the game's code, but may not behave as described.
 - **Hosted mods' own pages and links** can't be reached from the MODS tab (the platform lists one entry per DLL). Ship a NativeAOT build if you need them, or use `SettingsTile`.
 - **Crash reports** don't name a hosted mod whose own code crashed (JIT-compiled code isn't in a DLL).
 

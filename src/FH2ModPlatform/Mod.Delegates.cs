@@ -79,7 +79,7 @@ public abstract unsafe partial class Mod
 /// Reading the game's memory and checking its code, without pointers. Addresses
 /// are absolute: the game's base (<see cref="ModPlatform.WaitForCode"/>) plus an offset.
 /// </summary>
-public static class GameCode
+public static partial class GameCode
 {
     /// <summary>
     /// True if the bytes at <paramref name="address"/> are <paramref name="expected"/>. Check a

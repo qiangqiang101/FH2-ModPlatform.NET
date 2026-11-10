@@ -54,6 +54,13 @@ public abstract unsafe partial class Mod
     public bool IsReload => Slot.IsReload;
 
     /// <summary>
+    /// False for a mod that can't be swapped for a new copy while the game runs (one that changes the game as it
+    /// loads, say). Platform.NET then leaves the running copy alone when asked to reload it (A on the Hosted .NET
+    /// mods page, the reload key, <c>reload</c>, auto-reload) and says a restart is needed. True by default.
+    /// </summary>
+    public virtual bool Reloadable => true;
+
+    /// <summary>
     /// The folder your mod's files are in, for sounds, pictures and data you ship with it: your folder in
     /// fh2-mods-dotnet (a script's: the scripts folder); a NativeAOT mod's: the folder its DLL is in.
     /// </summary>
