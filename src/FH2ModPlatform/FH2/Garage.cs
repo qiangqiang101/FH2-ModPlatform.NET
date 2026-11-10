@@ -17,6 +17,11 @@ public static unsafe class Garage
     /// Adds <paramref name="car"/> to your garage (free, as a gift is) and returns its garage id,
     /// or 0 if the game didn't add it.
     /// </summary>
+    /// <remarks>
+    /// The game saves your whole profile for every car added, one save at a time, and quitting
+    /// waits for every queued save. Adding many cars at once leaves minutes of saving after the window
+    /// closes (killing the game then can break the save): add about one a second.
+    /// </remarks>
     public static int Add(CarInfo car, int colour = 0) => Add(car.Id, colour);
 
     /// <inheritdoc cref="Add(CarInfo, int)"/>
@@ -48,6 +53,33 @@ public static unsafe class Garage
             NativeMemory.Free(list);
             NativeMemory.Free(garageId);
             NativeMemory.Free(extra);
+        }
+    }
+
+    /// <summary>
+    /// How many cars are in your garage: the number the game compares with its limit (550) before
+    /// it adds one. Game thread only.
+    /// </summary>
+    public static int Count
+    {
+        get
+        {
+            Game.RequireGameThread("Garage.Count");
+            var garage = RequireGarage();
+            var saved = ((delegate* unmanaged<nint, uint>)(Game.Base + Addresses.GarageSavedCount.Offset))(garage);
+            var added = (*(nint*)(garage + Addresses.GarageNewCarsEnd) - *(nint*)(garage + Addresses.GarageNewCarsBegin)) / sizeof(nint);
+            return (int)(saved + added);
+        }
+    }
+
+    /// <summary>True when the game won't add another car: the game's own check, so it follows a mod that changes the limit.</summary>
+    public static bool IsFull
+    {
+        get
+        {
+            Game.RequireGameThread("Garage.IsFull");
+            var garage = RequireGarage();
+            return ((delegate* unmanaged<nint, byte>)(Game.Base + Addresses.GarageIsFull.Offset))(garage) != 0;
         }
     }
 

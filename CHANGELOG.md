@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0 (preview)
+
+### New
+- **`Garage.Count` and `Garage.IsFull`:** how many cars your garage has, and whether the game will add another (its limit is 550; the game's own check, so it follows a mod that changes it).
+
+### Changed
+- **`Garage.Add` says what adding many cars costs:** the game saves your whole profile for every car, and quitting waits for every queued save. Hundreds at once leave minutes of saving after the window closes; add about one a second.
+- **`PatchBytes` says it starts switched off,** like every hook: nothing is written until `EnableHooks`. The wiki's GameCode page explains it.
+- **A mod built with 0.11.0 needs Platform.NET 0.11.0 or later** in the game, and says so in `platform.log` if it's older. Mods built with 0.9.0 and 0.10.0 keep working.
+
 ## 0.10.0 (preview)
 
 ### New

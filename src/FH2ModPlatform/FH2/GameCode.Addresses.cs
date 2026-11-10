@@ -184,11 +184,17 @@ internal static partial class Addresses
     public static readonly Code SetTime = new("TimeOfDay::SetTime", 0x197AEC0, "40 53 48 83 EC 20 80 79 25 00 48 8B");
     public const int TimeOfDaySpeedField = 0x18;   // float, 1 = the game's own pace
     public const int TimeOfDayStoppedField = 0x24; // byte
+    // bool Garage::IsFull(this): cars added this session (the vector below) + SavedCarCount >= 550.
+    public static readonly Code GarageIsFull = new("Garage::IsFull", 0x2E77F0, "40 53 48 83 EC 20 48 8B 59 68 48 2B");
+    // uint Garage::SavedCarCount(this): SELECT COUNT() FROM the garage's table (its name at +0x10).
+    public static readonly Code GarageSavedCount = new("Garage saved car count", 0x2E0210, "40 53 48 81 EC B0 00 00 00 48 C7 44");
+    public const int GarageNewCarsBegin = 0x60;   // std::vector<Car*>, begin and end
+    public const int GarageNewCarsEnd = 0x68;
 
     public static readonly Code[] All =
     [
         CarUpdate, CarKind, ProfileManager, StoreGet, StoreSet, ValueFromInt, ValueFree,
-        AddCar, GameDelete, SetCurrentCar, LoadOptions,
+        AddCar, GameDelete, SetCurrentCar, LoadOptions, GarageIsFull, GarageSavedCount,
         SetHeadlights, SetHeadlightsByDriver, WorldTimeOfDay, GetTime, SetTime,
         ResetDamageEntry, ResetSimulatedDamageEntry, ClearDamageTotals,
     ];

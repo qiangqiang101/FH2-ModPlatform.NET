@@ -10,7 +10,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <!-- Only the English compiler messages: no 13 language folders of resources. -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <Version>0.10.0</Version>
+    <Version>0.11.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

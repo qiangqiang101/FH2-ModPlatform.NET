@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 # FH2DotNet.dll, the bridge that runs .NET mods, built alongside the platform
 # it ships with (the platform submodule). The managed side is built by dotnet;
 # scripts/build.sh builds both and stages dist/.
-project(fh2_dotnet VERSION 0.10.0 LANGUAGES C CXX)
+project(fh2_dotnet VERSION 0.11.0 LANGUAGES C CXX)
 
 add_subdirectory(platform)   # fh2mod_platform (d3dcompiler_47.dll, DWrite.dll) and fh2mod_api
 

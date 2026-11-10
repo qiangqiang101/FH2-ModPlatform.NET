@@ -4,7 +4,7 @@ Write [FH2 Mod Platform](https://github.com/Trinculo54/fh2-mod-platform) mods fo
 
 [![Build](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml/badge.svg)](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml)
 
-> **0.10.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
+> **0.11.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
 
 ## Requirements
 
@@ -44,7 +44,7 @@ public sealed class MyMod : Mod
     <FH2ModType>MyMod.MyMod</FH2ModType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FH2ModPlatform" Version="0.10.0" />
+    <PackageReference Include="FH2ModPlatform" Version="0.11.0" />
   </ItemGroup>
 </Project>
 ```
@@ -242,7 +242,7 @@ Everything you need is on `Mod` (per mod) and `ModPlatform` (process-wide). Each
 
 ## Known issues
 
-0.10.0 is a preview. Known so far:
+0.11.0 is a preview. Known so far:
 
 - **A replay after a race crashed the game once**, with several mods installed. It isn't known yet whether the SDK was to blame.
 - **Not tested much in the game yet:** `Camera.Shake`, `Hud.SetGaugeItem`, `DebugOverlay`, `Game.Rewound` and `CarRelocated`, `MapView`, `PhotoCamera`, `GarageCamera`, `Garage.Add`, `GameInput.PlayWithoutController`, and nitro on Drivatars' cars (`Vehicle.ExhaustFlames` on other cars). They're built from what other mods found and checked against the game's code, but may not behave as described.

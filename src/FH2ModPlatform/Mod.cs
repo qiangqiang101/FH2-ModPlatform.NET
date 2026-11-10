@@ -367,6 +367,7 @@ public abstract unsafe partial class Mod
     /// <summary>
     /// Writes <paramref name="bytes"/> (at most 32) at <paramref name="at"/>, which must hold
     /// <paramref name="expect"/> first; an empty <paramref name="expect"/> takes what's there if it matches the exe.
+    /// Like every hook, it starts switched off: nothing is written until you call <see cref="EnableHooks"/>.
     /// </summary>
     public Hook? PatchBytes(string? name, nint at, ReadOnlySpan<byte> bytes, ReadOnlySpan<byte> expect = default)
     {
