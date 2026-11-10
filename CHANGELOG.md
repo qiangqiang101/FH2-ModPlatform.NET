@@ -19,7 +19,7 @@
 - **`UI.Notify` shows any language** (the text goes to the game as UTF-16). Characters outside ASCII showed as `?`.
 
 ### Changed
-- **The SDK's assembly version is 1.1.0.0:** the API grew. A mod built against 0.10.0 needs Platform.NET 0.10.0 or later installed, and says so if it isn't.
+- **A mod built with 0.10.0 needs Platform.NET 0.10.0 or later** in the game, and says so in `platform.log` if it's older. Mods built with 0.9.0 keep working.
 
 ## 0.9.0 (preview)
 

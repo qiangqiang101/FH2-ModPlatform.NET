@@ -8,9 +8,15 @@
     <IsAotCompatible>true</IsAotCompatible>
     <RootNamespace>FH2ModPlatform</RootNamespace>
 
-    <!-- Hosted mods all share the host's copy of this assembly, so a mod built
-         against a newer SDK than the one installed fails to load with a clear
-         error. Bump AssemblyVersion only when the public API grows. -->
+    <!-- Two versions, on purpose:
+         Version (0.10.0) is the release: the zip, the package, the tag. Every release bumps it.
+         AssemblyVersion is only for the .NET loader. Hosted mods all share the host's copy of
+         this assembly, and a mod needs the one it was built against or newer: so a mod built
+         against a newer SDK than the one installed fails to load with a clear error, instead of
+         crashing on a method that isn't there. Bump its minor (1.2.0.0, 1.3.0.0...) only when
+         the public API grows, and never lower it: 0.9.0 shipped 1.0.0.0, so matching the release
+         (0.10.0.0) would stop every mod built for 0.9.0 from loading. Players never see it. -->
+
     <Version>0.10.0</Version>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
 
