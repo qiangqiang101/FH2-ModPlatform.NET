@@ -65,7 +65,26 @@ internal static partial class Addresses
     public const int BodyGear = 0xBA4;            // int, 0 = reverse (VirtualDashboard's probing; R = 0 checked in game)
     public const int BodyRpm = 0x148;             // float rad/s (VirtualDashboard's probing; 800 rpm idle in game)
     public const int BodyThrottle = 0xDB4, BodyBrake = 0xDFC, BodySteer = 0xE00, BodyHandbrake = 0xE08;   // VirtualDashboard
+    public const int BodyClutch = 0xA8C;          // 0..1 (VirtualDashboard)
+    public const int BodyRedline = 0x1C8, BodyLimiter = 0x1CC;   // rad/s: where the red zone starts, the rev limiter (VirtualDashboard)
+    public const int BodyBoost = 0x170;           // the turbo's boost, as the game keeps it (VirtualDashboard)
     public const int CarHeadlightsOn = 0x51A2;    // byte (FH2 ANNA)
+    public const int CarHeadlightsByDriver = 0x51A1, CarHeadlightsAuto = 0x51B4;   // bytes: the driver's choice, else the game's (FH2 ANNA)
+    // Indicators: bytes hazards, left, right (setters 0xF755C0 / 0xF76F10 / 0xF774E0 write them). Each car update turns them
+    // into the lights' blink; the game resets them now and then, so held ones are written before every update (FH2 ANNA).
+    public const int CarSignals = 0x51BB;
+    // Parts: the animation graph (car +0x4D40 -> +0x1C8) has named events ("roof:open", "doorLF:close"), the clips
+    // ForzaVista plays, kept in an unordered_map<std::string, ...> at graph +0x268 (its list's head node; count at +0x270).
+    public const int CarAnimator = 0x4D40, AnimatorGraph = 0x1C8, GraphEvents = 0x268;
+    public static readonly Code CarAnimEvent = new("ForzaCar animation event", 0xF5D300, "40 53 48 83 EC 20 48 8B 89 40 4D 00");
+    public static readonly Code FindAnimEvent = new("animation graph event lookup", 0x16FD4D0, "48 89 5C 24 18 48 89 74 24 20 57 41");
+    public static readonly Code AnimGraphDetail = new("animation graph detail", 0x16FBE90, "8B C2 C5 E8 57 D2 89 51 10 48 8B 15");
+    public static readonly Code[] Parts = [CarAnimEvent, FindAnimEvent, AnimGraphDetail];
+    // void SetAiDriver(car, bool ai): hands the car to the game's AI driver and back; the driver holder is car +0x4D10,
+    // its mode +0x4D30 (1 the player's, 0 the AI's) (FH2 ANNA's autodrive).
+    public static readonly Code SetAiDriver = new("ForzaCar SetAiDriver", 0xF79F10, "48 8B C1 48 8B 89 10 4D 00 00 48 85");
+    public const int CarDriverHolder = 0x4D10, CarDriverMode = 0x4D30;
+    public const int CarMediaName = 0x350;        // std::string, "ALF_8C_08" (VirtualDashboard)
     // void SetHeadlights(car, bool) and void SetHeadlightsByDriver(car, bool) (FH2 ANNA).
     public static readonly Code SetHeadlights = new("ForzaCar SetHeadlights", 0xF74EF0, "88 91 A2 51 00 00 C3");
     public static readonly Code SetHeadlightsByDriver = new("ForzaCar SetHeadlightsByDriver", 0xF74EE0, "88 91 A1 51 00 00 C3");
@@ -125,6 +144,24 @@ internal static partial class Addresses
     public static readonly Code ViewMatrixMounted = new("CameraMounted view matrix", 0x1034360, "48 89 5C 24 08 57 48 83 EC 70 C5 F8");
     public static readonly Code ViewMatrixChase = new("CameraFollow view matrix", 0x1034430, "48 8B C4 48 89 58 18 57 48 81 EC 00");
     public static readonly int[] ShakeCameraVtables = [0x2E78120, 0x2E77EA8, 0x2E703B0, 0x2E783A0, 0x2E78610, 0x2E78880];
+    // float GetFov(camera), vtable slot +0x70: an angle in radians, what the view is drawn with. One for the mounted
+    // cameras, one for the chase cameras (FnFNitro's FOV boost; the slot from Extra Options' notes).
+    public static readonly Code FovMounted = new("CameraMounted::GetFov", 0x10340F0, "80 B9 18 02 00 00 00 74 11 C5 FA 10");
+    public static readonly Code FovChase = new("CameraFollow::GetFov", 0x1034120, "80 B9 88 01 00 00 00 48 8B 81 80 01");
+    public static readonly Code[] CameraFov = [FovMounted, FovChase];
+    // The camera director (FH2 ANNA's cinematic camera): the player manager +0x48 +0x98 +0x2D0 is the views, the first
+    // one's vtable +0x38 gives its camera, a director (vtable 0x2C6C840). Its active camera is at +0x208; its groups
+    // (camera modes) at +0x1B0, the current one from CurrentCameraGroup(director + 0x1B0), changed with SetCameraGroup.
+    public const int ViewsChain1 = 0x48, ViewsChain2 = 0x98, ViewsChain3 = 0x2D0, ViewCameraSlot = 0x38;
+    public const int DirectorVtable = 0x2C6C840, DirectorActive = 0x208, DirectorGroups = 0x1B0, DirectorGroupCount = 0x1D0;
+    public const int CameraPositionSlot = 0x158;   // void(camera, double out[4]): where it is (any camera)
+    public static readonly Code CurrentCameraGroup = new("camera director current group", 0x399FF0, "48 83 EC 58 48 8D 54 24 20 E8 D2 32");
+    public static readonly Code SetCameraGroup = new("camera director set group", 0xFE5780, "40 53 57 41 56 48 83 EC 20 48 8B 81");
+    public static readonly Code ReplayShot = new("camera director replay shot", 0xFE5E30, "48 89 5C 24 08 48 89 6C 24 10 48 89");
+    // void Flash(view, 3, 0.6f): the white flash between cameras; the view's vtable 0x2E6E890 or 0x2C66188, not while +0xB1.
+    public static readonly Code CameraFlash = new("camera flash", 0xFDDAE0, "48 89 5C 24 08 57 48 81 EC D0 00 00");
+    public const int ViewVtableA = 0x2E6E890, ViewVtableB = 0x2C66188, ViewBusy = 0xB1;
+    public static readonly Code[] CameraDirector = [CurrentCameraGroup, SetCameraGroup, ReplayShot, CameraFlash];
 
     // ---- The HUD speedometer (FnFNitro) -------------------------------------------------------------------
     // void HUDStatusSpeedometer::UpdateGauges(speedo, float rpm): each HUD frame while the speedometer is up. Hooked
@@ -176,6 +213,49 @@ internal static partial class Addresses
     // The player manager global (FH2 ANNA, Extra Options): +0x48 the simulation (its +0x28: paused,
     // byte), whose +0x98 is the world, whose +0x480 is the time of day (getter 0x2E1F90 below).
     public const int PlayerManagerGlobal = 0x34ABA60;
+    // ---- Moments (FH2 ANNA's autodrive) and hiding the UI (ANNA-DroneMode) -----------------------------
+    // uintptr_t PauseEnter(state): the pause menu opens. uintptr_t EventEnter(context): an event starts.
+    public static readonly Code PauseEnter = new("pause menu enter", 0x8E98E0, "48 89 5C 24 08 57 48 83 EC 20 48 8B");
+    public static readonly Code EventEnter = new("event enter", 0x912860, "40 57 48 83 EC 40 48 C7 44 24 20 FE");
+    // void ClearRewind(rewind, 1, 1): forgets the rewind buffer; the rewind at [0x34D5710], while the recorder [0x34D5700] is.
+    public static readonly Code ClearRewindCode = new("rewind clear", 0x99C4C0, "48 89 5C 24 10 56 48 83 EC 20 41 0F");
+    public const int RewindGlobal = 0x34D5710, RewindRecorderGlobal = 0x34D5700;
+    // Application::Render's UI wait (renderer, surface, parameters), draw (app, screen, transform) and present (app,
+    // transform): with the UI hidden they let go of what they're handed (the surface's Release at +0x18; the screen's
+    // root refcount at +0x10, freed with the game's FreeObject) and draw nothing.
+    public static readonly Code UiWait = new("UI render wait", 0x1140ED0, "48 89 54 24 10 55 56 57 48 83 EC 30");
+    public static readonly Code UiDraw = new("UI draw", 0x15B51A0, "48 89 54 24 10 57 48 83 EC 30 48 C7");
+    public static readonly Code UiPresent = new("UI present", 0x15B5110, "40 53 48 83 EC 20 48 8B D9 48 8B 0D");
+    public static readonly Code FreeObject = new("FreeObject", 0x257730, "40 53 48 83 EC 20 48 8B D9 E8 B2 A2");
+    public static readonly Code[] HideUi = [UiWait, UiDraw, UiPresent, FreeObject];
+    // CareerNavigationModule (FH2 ANNA's routes; the module ANNA's voice commands used on the Xbox): caught as it's made.
+    public static readonly Code NavCtor = new("CareerNavigationModule()", 0x462930, "48 89 5C 24 08 48 89 74 24 10 57 48");
+    public static readonly Code NavDtor = new("~CareerNavigationModule()", 0x4685D0, "48 89 5C 24 08 48 89 74 24 10 48 89");
+    public static readonly Code NearestEvent = new("SetDestinationToNearestCareerEvent", 0x4825B0, "33 D2 E9 09 00 00 00 CC");
+    public static readonly Code NearestBucketList = new("SetDestinationToNearestBucketList", 0x4823E0, "40 55 53 56 57 48 8D 6C 24 C1 48 81");
+    public static readonly Code NearestRoadTrip = new("SetDestinationToNearestRoadtripLocation", 0x4829E0, "40 53 48 83 EC 40 48 8D 54 24 20 48");
+    public static readonly Code NearestBoard = new("route to the nearest bonus board", 0x482740, "40 55 53 56 57 41 56 48 8D 6C 24 C9");
+    public static readonly Code NearestBarnFind = new("route to the nearest barn find", 0x715A70, "48 8B C4 48 89 50 10 57 48 81 EC 90");
+    public static readonly Code LockWeakWorld = new("lock the world (weak to shared)", 0x1908670, "40 53 48 83 EC 30 48 83 C1 28 48 8B");
+    // The campaign's feature unlocks (XboxMusicRadio): FeatureUnlocks() gives the table, IsFeatureUnlocked(table,
+    // const std::string* name) one byte per name ("xbox_music", "multiplayer", "festival", "map"...).
+    public static readonly Code FeatureUnlocks = new("feature unlocks", 0xA65CA0, "40 53 48 83 EC 70 48 C7 44 24 30 FE");
+    public static readonly Code IsFeatureUnlocked = new("feature unlocked", 0xA67500, "40 53 55 56 57 41 56 48 83 EC 20 4C");
+    // The radio (ANNA-DroneMode): the radio UI is a shared_ptr from GetRadioUi([0x34C0F40], out); ChangeStation(ui, 1 the
+    // next / 0 the one before), as the game's own D-pad does. HudStatusRadioManager::OnSystemEvent(manager, event, code,
+    // payload): event 0x10, about every frame, has the station at manager +0x48, the song +0x08, the artist +0x28.
+    public const int RadioUisGlobal = 0x34C0F40;
+    public static readonly Code GetRadioUi = new("get the radio UI", 0x766C70, "40 53 48 83 EC 30 48 8B 49 08 48 8B");
+    public static readonly Code ChangeStation = new("radio change station", 0x660E50, "48 8B C4 57 48 83 EC 70 48 C7 40 A8");
+    public static readonly Code HudRadioEvent = new("HudStatusRadioManager::OnSystemEvent", 0x7835B0, "48 89 74 24 10 57 48 83 EC 30 49 8B");
+    // The game's database object (FnFNitro's and FH2 Underglow's upgrade kits): its virtual slot 8 runs a statement,
+    // (self, out, const char* sql). The string lookup (manager, table, key) -> const wchar_t*, "" for a key no table has.
+    public const int DatabaseGlobal = 0x34B3640, DatabaseQuerySlot = 8;
+    // The light where the player's car is: a scale in the game's global lighting, beside the sun's direction and the
+    // sky's colour, that drops to a fifth or less in a tunnel (FH2 ANNA's tunnel headlights).
+    public const int ZoneLightGlobal = 0x366101C;
+    public static readonly Code StringLookup = new("string lookup", 0x123D780, "48 83 EC 38 B8 FF FF 00 00 45 8B C8 66 3B D0");
+    public static readonly Code[] Navigation = [NavCtor, NavDtor, NearestEvent, NearestBucketList, NearestRoadTrip, NearestBoard, NearestBarnFind, LockWeakWorld];
     public const int SimField = 0x48, SimPausedField = 0x28, WorldField = 0x98, TimeOfDayField = 0x480;
     public static readonly Code WorldTimeOfDay = new("World time of day getter", 0x2E1F90, "48 8B 81 80 04 00 00 C3");
     // float TimeOfDay::GetTime(tod, int remap) / void SetTime(tod, float seconds, int remap); remap 1

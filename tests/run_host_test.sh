@@ -97,6 +97,30 @@ expect "[HiScript] hi from a VB script, reload: False"
 expect "Broken: Broken.cs(4,44): error CS0103: The name 'ThisDoesNotExist' does not exist in the current context"
 expect "Broken: Broken.cs doesn't compile"
 expect "pong from a script"
+expect "Platform.NET ui_uses 0x1"
+expect 'TestMod.NET add_translation pl'
+expect '(a PO file)'
+expect "translations: 1 entries; language pl, game PL"
+expect "tr: T[row.Volume.label]Volume / P:N(3) cars / N(1234.5) / D(2026-10-24)"
+expect 'add_setting Volume "T[row.Volume.label]Volume" (label from tr)'
+expect "TestMod.NET ui_uses 0x3"
+expect 'TestMod.NET show_toast "Own pop-up" / "with an icon" icon 1 sound 6 flags 1 key own'
+expect "TestMod.NET clear_toast own"
+expect 'TestMod.NET show_tip tip.reload "Press {button} to reload" glyph 4 vk 0x52 label Reload delay 5 flags 0'
+expect "tip seen: False"
+expect "TestMod.NET set_tip_seen tip.reload 1"
+expect "TestMod.NET play_ui_sound 1"
+expect "ui status: Popups"
+expect 'TestMod.NET set_string_tr Main.str 0x1234 str.hello "Hello"'
+expect 'TestMod.NET set_mod_description "T[mod.description]SDK test mod"'
+expect 'TestMod.NET show_message_box confirm "Reset?" "Sure?" 2 choices, first "Keep", focus 1'
+expect "box chose 1"
+expect "box chose -1"
+expect "TestMod.NET set_page_help Stats 3 prompts [glyph 3 vk 0x0 word 0 hotkey (null) label Refresh] [glyph 4 vk 0x0 word 4 hotkey (null) label (null)] [glyph 0 vk 0x0 word 0 hotkey Test label Test]"
+expect "TestMod.NET set_page_hints Stats 2 first First hint"
+expect "TestMod.NET show_page_hint Stats 1 kind 1"
+expect 'TestMod.NET set_setting_text Button "Button (changed)" "(null)" choices 3 first L'
+expect 'Platform.NET show_toast "Test pop-up" / "from TestMod"'
 expect "hi there from VB"
 expect "[HiScript] hi from a VB script, reload: True"
 if grep -q "FAILED\|Unhandled exception" "$out"; then echo "FAIL: errors in the output"; fail=1; fi

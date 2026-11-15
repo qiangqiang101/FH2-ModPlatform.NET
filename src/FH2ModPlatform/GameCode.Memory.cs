@@ -68,6 +68,30 @@ public static unsafe partial class GameCode
     // ---- The game's std::string ------------------------------------------------------------------
 
     /// <summary>
+    /// A new std::string of the game's (MSVC 2012's layout: 32 bytes, up to 15 characters kept in place), holding
+    /// <paramref name="text"/> as UTF-8, for a game function that takes a <c>const std::string*</c>. Its memory is never
+    /// freed (the game may keep the pointer), so make one per name you need and keep it, rather than one a frame.
+    /// </summary>
+    public static nint NewStdString(string text)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+        var s = (byte*)System.Runtime.InteropServices.NativeMemory.AllocZeroed((nuint)(32 + bytes.Length + 1));
+        if (bytes.Length < 16)
+        {
+            bytes.CopyTo(new Span<byte>(s, 16));
+            *(ulong*)(s + 24) = 15;
+        }
+        else
+        {
+            bytes.CopyTo(new Span<byte>(s + 32, bytes.Length));
+            *(byte**)s = s + 32;
+            *(ulong*)(s + 24) = (ulong)bytes.Length;
+        }
+        *(ulong*)(s + 16) = (ulong)bytes.Length;
+        return (nint)s;
+    }
+
+    /// <summary>
     /// The text of a <c>std::string</c> in the game's data (Visual C++ 2012's: 0x20 bytes, the text inside it
     /// up to 15 characters, else a pointer to it). "" if it isn't readable.
     /// </summary>

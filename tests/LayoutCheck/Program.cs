@@ -9,6 +9,7 @@ Type[] types =
 [
     typeof(FH2Xmm), typeof(FH2Context), typeof(FH2ModInfo), typeof(FH2Setting), typeof(FH2Page),
     typeof(FH2PageRow), typeof(FH2TitleEntry), typeof(FH2Hotkey), typeof(FH2ModApi),
+    typeof(FH2Toast), typeof(FH2Prompt), typeof(FH2Tip), typeof(FH2MessageBox),
 ];
 
 foreach (var t in types)

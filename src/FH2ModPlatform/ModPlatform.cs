@@ -60,6 +60,57 @@ public static unsafe class ModPlatform
     /// <summary>The running platform's version, like "2.8.0".</summary>
     public static string PlatformVersion => NativeString.FromUtf8(Api->PlatformVersion) ?? "";
 
+    // ---- The player's language (API 10, platform 2.9.0) ----------------------------------------
+
+    private static bool HasLanguage => IsAttached && Supports(ApiLevel.UiTemplates);
+
+    /// <summary>
+    /// The game's text language, as its string tables are named: "EN", "GB", "DE", "FR", "ES", "MX", "IT",
+    /// "BR", "NL", "PL", "RU", "JP", "KO", "CHT", "CZ", "HU". Null until the game has picked it (a few
+    /// seconds after it starts), and on platforms before 2.9.0. Cheap enough to ask every frame.
+    /// </summary>
+    public static string? GameLanguage
+    {
+        get
+        {
+            if (!HasLanguage) return null;
+            byte* code = stackalloc byte[16];
+            return Api->GameLanguage(code, 16) != 0 ? NativeString.FromUtf8(code) : null;
+        }
+    }
+
+    /// <summary>
+    /// The language text is translated into, as a BCP-47 tag ("en", "pl", "pt-BR", "zh-Hant"...): the
+    /// game's, once it has one; before that, the one it had last time. "en" on platforms before 2.9.0.
+    /// </summary>
+    public static string Language => HasLanguage ? NativeString.FromUtf8(Api->Language()) ?? "en" : "en";
+
+    /// <summary>
+    /// <paramref name="value"/> with <paramref name="decimals"/> digits after the point (0 to 6), the way
+    /// the player's language writes numbers: 1,234.5 in English, 1.234,5 in German.
+    /// </summary>
+    public static string FormatNumber(double value, int decimals = 0)
+    {
+        decimals = Math.Clamp(decimals, 0, 6);
+        if (HasLanguage)
+        {
+            byte* buf = stackalloc byte[64];
+            if (Api->FormatNumber(value, decimals, buf, 64) > 0) return NativeString.FromUtf8(buf) ?? "";
+        }
+        return value.ToString("N" + decimals, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>A date the way the player's language writes it: 24.10.2026 in German, 2026-10-24 in English.</summary>
+    public static string FormatDate(DateOnly date)
+    {
+        if (HasLanguage)
+        {
+            byte* buf = stackalloc byte[32];
+            if (Api->FormatDate(date.Year, date.Month, date.Day, buf, 32) > 0) return NativeString.FromUtf8(buf) ?? "";
+        }
+        return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     /// <summary>The folder with azimuth.exe, no trailing slash.</summary>
     public static string AzimuthDir => NativeString.FromUtf16(Api->AzimuthDir) ?? "";
 

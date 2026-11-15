@@ -19,7 +19,7 @@ public enum VehicleKind
 /// Coordinates are the game's, in metres: X and Z across the map, Y up. Speeds in metres a
 /// second (<see cref="SpeedKmh"/> and <see cref="SpeedMph"/> convert).
 /// </remarks>
-public sealed unsafe class Vehicle : IEquatable<Vehicle>
+public sealed unsafe partial class Vehicle : IEquatable<Vehicle>
 {
     internal Vehicle(nint handle) => Handle = handle;
 
@@ -155,19 +155,26 @@ public sealed unsafe class Vehicle : IEquatable<Vehicle>
     public float Steering => *(float*)(Body + Addresses.BodySteer);
     public float Handbrake => *(float*)(Body + Addresses.BodyHandbrake);
 
-    /// <summary>The headlights. Setting them turns the game's automatic lights off for this car, as ANNA does.</summary>
+    /// <summary>
+    /// The headlights. Setting them takes them over from the game's automatic lights for this car, as ANNA does, until
+    /// you set <see cref="HeadlightsAutomatic"/> back to true.
+    /// </summary>
     public bool HeadlightsOn
     {
         get
         {
             Game.RequireGameThread("Vehicle.HeadlightsOn");
-            return *(byte*)(Handle + Addresses.CarHeadlightsOn) != 0;
+            if (s_lights.TryGetValue(Handle, out var held)) return held;
+            var own = *(byte*)(Handle + Addresses.CarHeadlightsByDriver) != 0;
+            return *(byte*)(Handle + (own ? Addresses.CarHeadlightsOn : Addresses.CarHeadlightsAuto)) != 0;
         }
         set
         {
             Game.RequireGameThread("Vehicle.HeadlightsOn");
             ((delegate* unmanaged<nint, byte, void>)(Game.Base + Addresses.SetHeadlightsByDriver.Offset))(Handle, 1);
             ((delegate* unmanaged<nint, byte, void>)(Game.Base + Addresses.SetHeadlights.Offset))(Handle, value ? (byte)1 : (byte)0);
+            s_lights[Handle] = value;
+            s_seen[Handle] = Environment.TickCount64;
         }
     }
 

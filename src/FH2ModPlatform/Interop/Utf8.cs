@@ -15,6 +15,9 @@ internal unsafe struct Utf8Scope : IDisposable
     public byte* Str(string? s)
     {
         if (s is null) return null;
+        // Text from Mod.Tr goes back as the platform's own pointer: that's how the platform knows which
+        // translation it is, and puts it in the game's language each time it writes a page.
+        if (TranslatedText.TryGet(s, out var translated)) return translated;
         int n = Encoding.UTF8.GetByteCount(s);
         var p = (byte*)Alloc((nuint)n + 1);
         Encoding.UTF8.GetBytes(s, new Span<byte>(p, n));
@@ -43,6 +46,26 @@ internal unsafe struct Utf8Scope : IDisposable
         if (_blocks is null) return;
         foreach (var p in _blocks) NativeMemory.Free((void*)p);
         _blocks = null;
+    }
+}
+
+/// <summary>Every text <c>tr</c> and <c>tr_plural</c> handed out, by its text: valid for the session.</summary>
+internal static unsafe class TranslatedText
+{
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, nint> s_texts = new(StringComparer.Ordinal);
+
+    public static string Remember(byte* p)
+    {
+        var s = NativeString.FromUtf8(p) ?? "";
+        if (p is not null) s_texts.TryAdd(s, (nint)p);
+        return s;
+    }
+
+    public static bool TryGet(string s, out byte* p)
+    {
+        bool found = s_texts.TryGetValue(s, out var v);
+        p = (byte*)v;
+        return found;
     }
 }
 

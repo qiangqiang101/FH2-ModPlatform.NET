@@ -205,6 +205,7 @@ public static unsafe partial class Game
             NoteDynamics(car);
             NoteFlames(car);
             Audio.NoteCar(car);
+            Vehicle.NoteCar(car);   // held headlights and indicators, before the update reads them
         }
         catch (Exception e)
         {
@@ -236,6 +237,7 @@ public static unsafe partial class Game
             {
                 PlayerFrame(car);
                 Player.TeleportFrame();
+                Vehicle.ForgetGoneCars();
             }
             catch (Exception e) { Log(ModPlatform.GameOwner, "Game events: " + e.Message); }
             while (s_queue.TryDequeue(out var a)) Safe(a, "Game.Run");
@@ -269,9 +271,13 @@ public static unsafe partial class Game
         Camera.Forget();
         Hud.ClearGaugeItems();
         ForgetEvents(assembly);
+        ForgetMoments(assembly);
         DebugOverlay.Forget();
         Menus.Forget(assembly);
         PhotoCamera.Forget(assembly);
+        Camera.ForgetViews(assembly);
+        Radio.Forget(assembly);
+        GameDb.Forget(assembly);
         GameInput.Forget();
         Controller.StopSimulating();
         var keep = new List<Action>();

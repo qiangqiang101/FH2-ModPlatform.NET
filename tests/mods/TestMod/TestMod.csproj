@@ -3,6 +3,8 @@
     <FH2ModType>TestMod.TestMod</FH2ModType>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Mod.AddTranslations reads these: TestMod.Lang.pl.po is Polish. -->
+    <EmbeddedResource Include="Lang\*.po" />
     <ProjectReference Include="..\..\TestModHelper\TestModHelper.csproj" />
   </ItemGroup>
 </Project>

@@ -139,9 +139,11 @@ FH2Hook* api_hook(FH2Mod*, const char*, void*, void*, void**) { return nullptr; 
 FH2Hook* api_hook_pointer(FH2Mod*, const char*, void**, void*, void**) { return nullptr; }
 int api_enable(FH2Mod*, FH2Hook*) { return 0; }
 void* api_wait_for_code(uint32_t) { return nullptr; }
+bool from_tr(const char* p);   // API 10, below
 int api_add_setting(FH2Mod* m, const FH2Setting* s) {
-    std::printf("[platform] %s add_setting %s \"%s\" kind %d value %d slider %g choices %u\n", nm(m), s->key, s->label,
-                s->kind, s->value, s->slider_value, s->kind == FH2_SETTING_CHOICE ? s->choice_count : 0);
+    std::printf("[platform] %s add_setting %s \"%s\"%s kind %d value %d slider %g choices %u\n", nm(m), s->key, s->label,
+                from_tr(s->label) ? " (label from tr)" : "", s->kind, s->value, s->slider_value,
+                s->kind == FH2_SETTING_CHOICE ? s->choice_count : 0);
     for (uint32_t i = 0; s->kind == FH2_SETTING_CHOICE && i < s->choice_count; ++i)
         std::printf("[platform]   choice %u: %s\n", i, s->choices[i]);
     std::scoped_lock lk{g_mu};
@@ -193,6 +195,90 @@ int api_add_command(FH2Mod* m, const char* name, const char* help, FH2CommandFn 
     std::printf("[platform] %s add_command %s (%s)\n", nm(m), name, S(help));
     std::scoped_lock lk{g_mu};
     g_commands.push_back({m, name, fn, user});
+    return 1;
+}
+
+// API 10: pop-ups, as far as the SDK uses them (UI.Notify).
+int api_ui_uses(FH2Mod* m, uint32_t uses) {
+    std::printf("[platform] %s ui_uses 0x%X\n", nm(m), uses);
+    return 1;
+}
+uint32_t api_ui_status(FH2Mod*) { return FH2_UI_TOASTS; }
+int api_show_toast(FH2Mod* m, const FH2Toast* t) {
+    if (!t || t->size < offsetof(FH2Toast, icon) || !t->title) return 0;
+    const bool whole = t->size >= sizeof(FH2Toast);
+    std::printf("[platform] %s show_toast \"%s\" / \"%s\" icon %u sound %u flags %u key %s\n", nm(m), t->title, S(t->subtitle),
+                whole ? t->icon : 0, whole ? t->sound : 0, whole ? t->flags : 0, S(t->key));
+    return 1;
+}
+
+// API 10: the rest of what the SDK binds. Each logs what it got, so the host test can check the marshalling.
+std::vector<std::string*> g_tr;   // every text tr handed out: a label passed back as one of these is "from tr"
+bool from_tr(const char* p) {
+    std::scoped_lock lk{g_mu};
+    for (auto* s : g_tr) if (s->c_str() == p) return true;
+    return false;
+}
+const char* keep_tr(std::string s) {
+    auto* p = new std::string(std::move(s));
+    std::scoped_lock lk{g_mu};
+    g_tr.push_back(p);
+    return p->c_str();
+}
+int api_game_language(char* code, size_t size) { std::snprintf(code, size, "PL"); return 1; }
+int api_set_setting_text(FH2Mod* m, const char* key, const char* label, const char* desc, const char* const* choices, uint32_t n) {
+    std::printf("[platform] %s set_setting_text %s \"%s\" \"%s\" choices %u%s%s\n", nm(m), S(key), S(label), S(desc), n,
+                n ? " first " : "", n ? choices[0] : "");
+    return 1;
+}
+void api_set_mod_description(FH2Mod* m, const char* d) { std::printf("[platform] %s set_mod_description \"%s\"\n", nm(m), S(d)); }
+const char* api_language() { return "pl"; }
+int api_add_translation(FH2Mod* m, const char* lang, const char* po, size_t size) {
+    std::printf("[platform] %s add_translation %s %zu bytes%s\n", nm(m), S(lang), size,
+                po && std::strstr(po, "msgctxt") ? " (a PO file)" : "");
+    return 1;
+}
+const char* api_tr(FH2Mod*, const char* key, const char* english) { return keep_tr("T[" + std::string(S(key)) + "]" + S(english)); }
+const char* api_tr_plural(FH2Mod*, const char*, const char* one, const char* other, int64_t n) {
+    return keep_tr("P:" + std::string(n == 1 ? S(one) : S(other)));
+}
+void api_set_string_tr(FH2Mod* m, const char* table, uint16_t key, const char* msg_key, const wchar_t* english) {
+    std::printf("[platform] %s set_string_tr %s 0x%04X %s \"%s\"\n", nm(m), S(table), key, S(msg_key), narrow(english).c_str());
+}
+int api_format_number(double v, int decimals, char* out, size_t n) { return std::snprintf(out, n, "N(%.*f)", decimals, v); }
+int api_format_date(int y, int mo, int d, char* out, size_t n) { return std::snprintf(out, n, "D(%04d-%02d-%02d)", y, mo, d); }
+int api_play_ui_sound(FH2Mod* m, uint32_t sound) { std::printf("[platform] %s play_ui_sound %u\n", nm(m), sound); return 1; }
+void api_clear_toast(FH2Mod* m, const char* key) { std::printf("[platform] %s clear_toast %s\n", nm(m), S(key)); }
+int api_show_tip(FH2Mod* m, const FH2Tip* t) {
+    if (!t || t->size < sizeof(FH2Tip)) return 0;
+    std::printf("[platform] %s show_tip %s \"%s\" glyph %u vk 0x%X label %s delay %u flags %u\n", nm(m), S(t->key), S(t->text),
+                t->button.glyph, t->button.vk, S(t->button.label), t->delay_s, t->flags);
+    return 1;
+}
+int api_tip_seen(FH2Mod* m, const char* key) { std::printf("[platform] %s tip_seen %s\n", nm(m), S(key)); return 0; }
+void api_set_tip_seen(FH2Mod* m, const char* key, int seen) { std::printf("[platform] %s set_tip_seen %s %d\n", nm(m), S(key), seen); }
+int api_show_message_box(FH2Mod* m, const FH2MessageBox* b) {
+    if (!b || b->size < sizeof(FH2MessageBox) || !b->choice_count) return 0;
+    std::printf("[platform] %s show_message_box %s \"%s\" \"%s\" %u choices, first \"%s\", focus %u\n", nm(m), S(b->key), S(b->title),
+                S(b->message), b->choice_count, b->choices[0], b->focus);
+    if (b->on_choose) {   // the player picks the second choice, then backs out of another box
+        b->on_choose(b->user, b->key, 1);
+        b->on_choose(b->user, b->key, FH2_BOX_BACK);
+    }
+    return 1;
+}
+int api_set_page_help(FH2Mod* m, const char* page, const FH2Prompt* p, uint32_t n) {
+    std::printf("[platform] %s set_page_help %s %u prompts", nm(m), S(page), n);
+    for (uint32_t i = 0; i < n; ++i) std::printf(" [glyph %u vk 0x%X word %u hotkey %s label %s]", p[i].glyph, p[i].vk, p[i].word, S(p[i].hotkey), S(p[i].label));
+    std::printf("\n");
+    return static_cast<int>(n);
+}
+int api_set_page_hints(FH2Mod* m, const char* page, const char* const* texts, uint32_t n) {
+    std::printf("[platform] %s set_page_hints %s %u%s%s\n", nm(m), S(page), n, n ? " first " : "", n ? texts[0] : "");
+    return 1;
+}
+int api_show_page_hint(FH2Mod* m, const char* page, int index, uint32_t kind) {
+    std::printf("[platform] %s show_page_hint %s %d kind %u\n", nm(m), S(page), index, kind);
     return 1;
 }
 
@@ -252,6 +338,28 @@ FH2ModApi make_api() {
     a.add_dump_memory      = api_add_dump_memory;
     a.add_hotkey           = api_add_hotkey;
     a.add_command          = api_add_command;
+    a.ui_uses              = api_ui_uses;
+    a.ui_status            = api_ui_status;
+    a.show_toast           = api_show_toast;
+    a.game_language        = api_game_language;
+    a.set_setting_text     = api_set_setting_text;
+    a.set_mod_description  = api_set_mod_description;
+    a.language             = api_language;
+    a.add_translation      = api_add_translation;
+    a.tr                   = api_tr;
+    a.tr_plural            = api_tr_plural;
+    a.set_string_tr        = api_set_string_tr;
+    a.format_number        = api_format_number;
+    a.format_date          = api_format_date;
+    a.play_ui_sound        = api_play_ui_sound;
+    a.clear_toast          = api_clear_toast;
+    a.show_tip             = api_show_tip;
+    a.tip_seen             = api_tip_seen;
+    a.set_tip_seen         = api_set_tip_seen;
+    a.show_message_box     = api_show_message_box;
+    a.set_page_help        = api_set_page_help;
+    a.set_page_hints       = api_set_page_hints;
+    a.show_page_hint       = api_show_page_hint;
     return a;
 }
 

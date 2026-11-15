@@ -123,6 +123,62 @@ public unsafe struct FH2TitleEntry
     public byte* ListMessage;
 }
 
+/// <summary>A pop-up (API 10): the game's HUD notification, queued by the platform.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct FH2Toast
+{
+    public uint Size;
+    public byte* Key;        // letters, digits, '_'; replaces your waiting one with the same key; null = never
+    public byte* Title;      // UTF-8, 28 characters, shown in capitals
+    public byte* Subtitle;   // UTF-8, 45 characters; may be null
+    public uint Icon;        // FH2_ICON_
+    public uint Sound;       // FH2_SOUND_; 0 = none
+    public uint Flags;       // FH2_TOAST_FLAG_
+    public uint ExpireS;     // 0 = 120 s
+}
+
+/// <summary>One button prompt (API 10). Frozen: it never grows, and <c>Reserved</c> must be zero.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct FH2Prompt
+{
+    public uint Glyph;       // FH2_GLYPH_
+    public uint Vk;          // a Windows virtual-key code; 0 = the glyph always
+    public uint Modifiers;   // FH2_KEY_
+    public uint Word;        // FH2_WORD_: the game's own word instead of Label
+    public byte* Hotkey;     // or one of your hotkeys' keys: its binding, whatever it is now
+    public byte* Label;      // UTF-8
+    public int Hold;         // nonzero: "Hold" before it (the HUD layer only)
+    public fixed uint Reserved[5];
+}
+
+/// <summary>A tip (API 10).</summary>
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct FH2Tip
+{
+    public uint Size;
+    public byte* Key;        // the seen key; null = no seen state
+    public byte* Text;       // UTF-8 with "{button}"; 45 characters
+    public FH2Prompt Button; // glyph 0, vk 0, no hotkey = none
+    public uint DelayS;      // 0 = 60
+    public uint MaxSessions; // FH2_TIP_FLAG_UNTIL_DONE only; 0 = 1
+    public uint Flags;       // FH2_TIP_FLAG_
+}
+
+/// <summary>The game's message box (API 10).</summary>
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct FH2MessageBox
+{
+    public uint Size;
+    public byte* Key;
+    public byte* Title;      // 30 characters
+    public byte* Message;    // 200 characters; may be null
+    public byte** Choices;
+    public uint ChoiceCount; // 1 to 99 (the platform adds Back)
+    public uint Focus;
+    public delegate* unmanaged<void*, byte*, uint, void> OnChoose;   // FH2_BOX_BACK = 0xFFFFFFFF
+    public void* User;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct FH2Hotkey
 {
@@ -212,4 +268,28 @@ public unsafe struct FH2ModApi
     public delegate* unmanaged<FH2Mod*, void*, nuint, void> AddDumpMemory;
     public delegate* unmanaged<FH2Mod*, FH2Hotkey*, int> AddHotkey;
     public delegate* unmanaged<FH2Mod*, byte*, byte*, delegate* unmanaged<void*, byte*, byte*, byte*, nuint, void>, void*, int> AddCommand;
+
+    // API 10 (platform 2.9.0): text in the game's language, translations, UI templates.
+    public delegate* unmanaged<byte*, nuint, int> GameLanguage;
+    public delegate* unmanaged<FH2Mod*, byte*, byte*, byte*, byte**, uint, int> SetSettingText;
+    public delegate* unmanaged<FH2Mod*, byte*, void> SetModDescription;
+    public delegate* unmanaged<byte*> Language;
+    public delegate* unmanaged<FH2Mod*, byte*, byte*, nuint, int> AddTranslation;
+    public delegate* unmanaged<FH2Mod*, byte*, byte*, byte*> Tr;
+    public delegate* unmanaged<FH2Mod*, byte*, byte*, byte*, long, byte*> TrPlural;
+    public delegate* unmanaged<FH2Mod*, byte*, ushort, byte*, char*, void> SetStringTr;
+    public delegate* unmanaged<double, int, byte*, nuint, int> FormatNumber;
+    public delegate* unmanaged<int, int, int, byte*, nuint, int> FormatDate;
+    public delegate* unmanaged<FH2Mod*, uint> UiStatus;
+    public delegate* unmanaged<FH2Mod*, uint, int> UiUses;
+    public delegate* unmanaged<FH2Mod*, uint, int> PlayUiSound;
+    public delegate* unmanaged<FH2Mod*, FH2Toast*, int> ShowToast;
+    public delegate* unmanaged<FH2Mod*, byte*, void> ClearToast;
+    public delegate* unmanaged<FH2Mod*, FH2Tip*, int> ShowTip;
+    public delegate* unmanaged<FH2Mod*, byte*, int> TipSeen;
+    public delegate* unmanaged<FH2Mod*, byte*, int, void> SetTipSeen;
+    public delegate* unmanaged<FH2Mod*, FH2MessageBox*, int> ShowMessageBox;
+    public delegate* unmanaged<FH2Mod*, byte*, FH2Prompt*, uint, int> SetPageHelp;
+    public delegate* unmanaged<FH2Mod*, byte*, byte**, uint, int> SetPageHints;
+    public delegate* unmanaged<FH2Mod*, byte*, int, uint, int> ShowPageHint;
 }

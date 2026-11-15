@@ -7,7 +7,7 @@ using FH2ModPlatform.Native;
 namespace FH2;
 
 /// <summary>The game's camera. Any thread.</summary>
-public static unsafe class Camera
+public static unsafe partial class Camera
 {
     private static volatile float s_shake;
     private static volatile bool s_ready;
@@ -56,16 +56,22 @@ public static unsafe class Camera
         ok &= chase is not null && api->EnableHooks(owner, chase) != 0;
         if (!ok) Game.Log(owner, "Camera.Shake: couldn't hook the cameras (it may work in some views only)");
         s_ready = ok;
+        InstallFov(b, owner);
     }
 
     /// <summary>A hosted mod is being replaced: it can't stop the shake any more, so it stops now.</summary>
-    internal static void Forget() => s_shake = 0;
+    internal static void Forget()
+    {
+        s_shake = 0;
+        s_fovScale = 1;
+    }
 
     [UnmanagedCallersOnly]
     private static nint OnMounted(nint camera, float* m)
     {
         var r = ((delegate* unmanaged<nint, float*, nint>)*s_mountedOriginal)(camera, m);
         ShakeMatrix(camera, m);
+        ViewHandlers(camera, m);
         return r;
     }
 
@@ -74,6 +80,7 @@ public static unsafe class Camera
     {
         var r = ((delegate* unmanaged<nint, float*, nint>)*s_chaseOriginal)(camera, m);
         ShakeMatrix(camera, m);
+        ViewHandlers(camera, m);
         return r;
     }
 

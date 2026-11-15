@@ -37,6 +37,16 @@ internal static unsafe class Callbacks
         catch (Exception e) { Report(b.Mod, $"setting {NativeString.FromUtf8(key)} change handler", e); }
     }
 
+    /// <summary>A message box's choice (API 10): FH2_BOX_BACK becomes MessageBoxOptions.Back.</summary>
+    [UnmanagedCallersOnly]
+    internal static void BoxChosen(void* user, byte* key, uint choice)
+    {
+        var b = Get(user);
+        if (b.Value is not Action<int> fn) return;
+        try { fn(choice == 0xFFFFFFFFu ? MessageBoxOptions.Back : (int)choice); }
+        catch (Exception e) { Report(b.Mod, $"message box {NativeString.FromUtf8(key)} choice handler", e); }
+    }
+
     [UnmanagedCallersOnly]
     internal static void SliderChanged(void* user, byte* key, float value)
     {

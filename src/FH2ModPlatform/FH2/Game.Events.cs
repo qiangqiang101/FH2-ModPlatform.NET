@@ -128,6 +128,7 @@ public static unsafe partial class Game
     {
         get
         {
+            if (ModPlatform.GameLanguage is { } fromPlatform) return fromPlatform;   // platform 2.9.0 and later
             if (!IsReady) return null;
             var manager = *(nint*)(s_base + Addresses.StringsManagerGlobal);
             if (manager == 0) return null;

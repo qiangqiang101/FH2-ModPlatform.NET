@@ -4,7 +4,7 @@ Write [FH2 Mod Platform](https://github.com/Trinculo54/fh2-mod-platform) mods fo
 
 [![Build](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml/badge.svg)](https://github.com/qiangqiang101/FH2-ModPlatform.NET/actions/workflows/build.yml)
 
-> **0.11.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
+> **0.12.0 is a preview.** The API can still change before 1.0, and some of the `FH2` classes haven't been tested much in the game yet: see [Known issues](#known-issues).
 
 ## Requirements
 
@@ -44,7 +44,7 @@ public sealed class MyMod : Mod
     <FH2ModType>MyMod.MyMod</FH2ModType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FH2ModPlatform" Version="0.11.0" />
+    <PackageReference Include="FH2ModPlatform" Version="0.12.0" />
   </ItemGroup>
 </Project>
 ```
@@ -77,23 +77,26 @@ If World.Waypoint IsNot Nothing Then Player.TeleportTo(World.Waypoint.Value)
 |---|---|
 | `Game` | The game's thread: `Tick` (once a frame while you drive), `Run`/`RunAsync` (code on the game's thread), `PhysicsStep` (every car's physics step), `Rewound`, `CarRelocated`, `IsDriving`, `IsPaused`, `Language` |
 | `Player` | Credits, level, skill points, your car (`Player.Car`), `TeleportTo` (the road nearest a spot, as fast travel does) |
-| `Vehicle` | A car: kind (yours, a Drivatar's, traffic), model, position, direction, speed, gear, rpm, pedals, `Velocity` (settable in `PhysicsStep`), `IsOnGround`, `Repair`, `HeadlightsOn`, `ExhaustFlames`, `Backfire` |
-| `World` | Every car, the nearest, cars in range, the time of day and its pace, `Waypoint` (the map's) |
-| `Garage`, `CarCatalog`, `Profile` | Cars you own and adding one, every car's names, the profile's values |
+| `Vehicle` | A car: kind (yours, a Drivatar's, traffic), model, position, direction, speed, gear, rpm, pedals, clutch, redline, boost, `Velocity` (settable in `PhysicsStep`), `IsOnGround`, `Repair`, headlights (`HeadlightsOn`, `HeadlightsAutomatic`), `Indicators`, part animations (`OpenPart`, `PlayAnimation`), `AiDriving`, `ExhaustFlames`, `Backfire` |
+| `World` | Every car, the nearest, cars in range, the time of day and its pace, `Waypoint` (the map's), `RouteToNearest` (an event, a bonus board, a barn find...), `LightLevel` (tunnels) |
+| `Garage`, `CarCatalog`, `Profile` | Cars you own and adding one, how many there are, `SetCapacity` (more than 550), every car's names, the profile's values |
 | `ANNA` | Entries in FH2 ANNA's menu, in its own lists or yours |
-| `UI` | The HUD's notification: `UI.Notify(title, text)` |
-| `Hud` | Whether the speedometer is up, and values for a speedometer XAML of your own (`SetGaugeItem`) |
-| `Camera` | `Shake` for the driving cameras |
+| `UI` | The HUD's notification: `UI.Notify(title, text)` (for more, `Mod.ShowPopup`) |
+| `Hud` | Whether the speedometer is up, values for a speedometer XAML of your own (`SetGaugeItem`), `HideAll` |
+| `Camera` | Which camera is on (`Kind`), where it is, `FovScale`, `ViewUpdated` (move or turn it), `Shake`, the director's modes, replay shots and flash |
 | `Audio` | Your own sounds through the game's audio, from a car or a spot (`LoadSound`, `PlayOn`, `MixSound`) |
 | `Controller` | The controller's buttons, triggers, sticks and rumble; buttons held for other mods (`Simulate`, `FeedNativeMod`) |
 | `Menus`, `UiElement` | The menus: a frame on the UI thread, what has the focus, the elements on screen and where they're drawn, the menus' keys |
 | `GameInput` | Feeding the game's controls: driving controls, menu sticks, the controller's buttons held, playing without a controller |
-| `GameWindow` | The game's window: the cursor, the mouse's buttons and wheel, keys |
+| `GameWindow` | The game's window: the cursor, the mouse's buttons and wheel, keys, `KeepRunningUnfocused` |
 | `MapView`, `PhotoCamera`, `GarageCamera` | The map's cursor, camera and zoom; photo mode's sticks; the garage camera's distance |
 | `ButtonIcons`, `Picture` | The controller's button pictures shown as your own; PNGs made into game textures |
 | `SettingsTile` | A tile of your own on Pause > Settings, opening your mod's rows |
 | `Skills` | How soon the game can award Wreckage, Lumberjack or Sideswipe again (`SetRetriggerDelay`) |
 | `DebugOverlay` | Lines of text over the game, for watching values while you drive |
+| `Radio` | What's playing (station, song, artist) and changing the station |
+| `Livery` | The livery editor's layer limits |
+| `GameDb` | Rewriting the SQL the game runs and answering string keys it lacks: custom upgrade parts |
 
 Most of them are for the game's thread (`Game.Tick`, `Game.Run`) or the UI thread (`Menus.Frame`). Each says which in its documentation, and calling one from the wrong thread throws and says where to call it from.
 
@@ -219,7 +222,8 @@ Everything you need is on `Mod` (per mod) and `ModPlatform` (process-wide). Each
 
 - **Callbacks** (settings, pages, title entries, hotkeys, commands, instruction hooks) are ordinary delegates, kept alive for the life of the process. An exception thrown from one is caught and logged to `platform.log`, never passed on to the game. A command that throws replies `error: <message>`.
 - **Threads.** `OnInit` runs on the platform's thread: keep it quick, and start a `Thread` for anything slow, such as `ModPlatform.WaitForGame()` or `WaitForCode()`. The platform's rules about which thread each callback runs on still apply.
-- **API versions.** Methods newer than the running platform throw `NotSupportedException`. Check `ModPlatform.Supports(ApiLevel.Pages)` first if you support older platforms.
+- **API versions.** Methods newer than the running platform throw `NotSupportedException`. Check `ModPlatform.Supports(ApiLevel.Pages)` first if you support older platforms. The exception is platform 2.9.0's (API 10): pop-ups, tips, message boxes, sounds, page help and translations do nothing on an older platform (and `Tr` gives back your English), so they need no check.
+- **Pop-ups, tips, message boxes and translations** (platform 2.9.0): `ShowPopup`, `ShowTip`, `ShowMessageBox`, `PlaySound`, `SetPageHelp`, `AddTranslations`, `Tr`, `TrPlural`; see the wiki's [Pop-ups, tips and message boxes](https://github.com/qiangqiang101/FH2-ModPlatform.NET/wiki/Pop-ups-tips-and-message-boxes) and [Translations](https://github.com/qiangqiang101/FH2-ModPlatform.NET/wiki/Translations). Text from `Tr` passed to a row, page or hotkey follows the game's language by itself.
 - **Hooks.** Detours have to be native-callable: write them as `[UnmanagedCallersOnly]` static methods and call the original code through `hook.Original`.
 
   ```csharp
@@ -242,7 +246,7 @@ Everything you need is on `Mod` (per mod) and `ModPlatform` (process-wide). Each
 
 ## Known issues
 
-0.11.0 is a preview. Known so far:
+0.12.0 is a preview. Known so far:
 
 - **A replay after a race crashed the game once**, with several mods installed. It isn't known yet whether the SDK was to blame.
 - **Not tested much in the game yet:** `Camera.Shake`, `Hud.SetGaugeItem`, `DebugOverlay`, `Game.Rewound` and `CarRelocated`, `MapView`, `PhotoCamera`, `GarageCamera`, `Garage.Add`, `GameInput.PlayWithoutController`, and nitro on Drivatars' cars (`Vehicle.ExhaustFlames` on other cars). They're built from what other mods found and checked against the game's code, but may not behave as described.

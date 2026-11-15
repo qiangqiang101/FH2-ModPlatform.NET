@@ -19,13 +19,35 @@ public sealed class TestMod : Mod
         System.Diagnostics.Trace.WriteLine("Trace.WriteLine works too");
         Log($"load context: {System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(GetType().Assembly)?.Name}");
         Log(TestModHelper.Greeter.Greet("the platform"));
+        FH2.UI.Notify("Test pop-up", "from TestMod");   // the platform's pop-ups (API 10)
+
+        // API 10: translations, the player's language, and the UI templates.
+        Log($"translations: {AddTranslations()} entries; language {ModPlatform.Language}, game {ModPlatform.GameLanguage}");
+        Log($"tr: {Tr("row.Volume.label", "Volume")} / {TrPlural("cars", "{n} car", "{n} cars", 3)} / " +
+            $"{ModPlatform.FormatNumber(1234.5, 1)} / {ModPlatform.FormatDate(new DateOnly(2026, 10, 24))}");
+        DeclareUi(UiUses.Popups | UiUses.Tips);
+        ShowPopup(new PopupOptions("Own pop-up") { Text = "with an icon", Icon = PopupIcon.Trophy, Sound = UiSound.Notify, Key = "own", Urgent = true });
+        ClearPopup("own");
+        ShowTip(new TipOptions("tip.reload", "Press {button} to reload") { Button = Prompt.Pad(PadGlyph.Y, "Reload", 0x52), DelaySeconds = 5 });
+        Log($"tip seen: {TipSeen("tip.reload")}");
+        SetTipSeen("tip.reload");
+        PlaySound(UiSound.Select);
+        Log($"ui status: {UiStatus}");
+        SetStringTr("Main.str", 0x1234, "str.hello", "Hello");
+        SetDescription(Tr("mod.description", "SDK test mod"));
+        ShowMessageBox(new MessageBoxOptions("confirm", "Reset?", ["Keep", "Reset"])
+        {
+            Message = "Sure?",
+            Focus = 1,
+            Chosen = c => Log($"box chose {c}"),
+        });
         Log($"session {ModPlatform.SessionId}, online {ModPlatform.PlayingOnline}, mods dir {ModPlatform.ModsDir}");
 
         ReplaceString("Main.str", "Ünïcødé", "テキスト ✓");
         AddSql("UPDATE Data_Car SET Year = Year WHERE 0;");
         SetFile("UI/test.xml", "<x/>"u8);
 
-        AddSetting(new SliderSetting("Volume", "Volume", 0.25f, 0, 1)
+        AddSetting(new SliderSetting("Volume", Tr("row.Volume.label", "Volume"), 0.25f, 0, 1)
         {
             Decimals = 2,
             Changed = v => Log($"slider -> {v} (copy {_copy})"),
@@ -41,6 +63,10 @@ public sealed class TestMod : Mod
         AddSetting(new LinkSetting("Docs", "Docs", "https://example.com"));
 
         AddPage(new PageOptions("Stats", "Stats") { Opened = () => Log("page opened") });
+        SetPageHelp("Stats", Prompt.Pad(PadGlyph.X, "Refresh"), new Prompt { Glyph = PadGlyph.Y, Word = UiWord.Toggle }, Prompt.ForHotkey("Test", "Test"));
+        SetPageHints("Stats", "First hint", "Second hint");
+        ShowPageHint("Stats", 1, HintKind.Attention);
+        SetSettingText("Button", "Button (changed)", null, ["L", "R", "A"]);
         SetPageRows("Stats",
         [
             PageRow.Heading("Heading"),

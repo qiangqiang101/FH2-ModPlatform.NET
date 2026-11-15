@@ -109,3 +109,98 @@ public sealed record HotkeyOptions(string Key, string Label, HotkeyBinding Bindi
     /// <summary>The player picked another binding on the Mods page: save it and pass it in next time.</summary>
     public Action<HotkeyBinding>? Rebound { get; init; }
 }
+
+// ---- UI templates (API 10, platform 2.9.0) ---------------------------------------------------
+
+/// <summary>
+/// A pop-up: the game's HUD notification, with your title and line (<see cref="Mod.ShowPopup(PopupOptions)"/>).
+/// About 5 seconds on screen, bottom centre over the driving view.
+/// </summary>
+/// <param name="Title">Shown in capitals; 28 characters. Pass sentence case.</param>
+public sealed record PopupOptions(string Title)
+{
+    /// <summary>The line under the title; 45 characters.</summary>
+    public string? Text { get; init; }
+    /// <summary>Letters, digits and '_': a new pop-up with the same key replaces your waiting one. Null: never replaced.</summary>
+    public string? Key { get; init; }
+    public PopupIcon Icon { get; init; }
+    /// <summary>A sound as it appears; none by default, as the game's own pop-ups.</summary>
+    public UiSound Sound { get; init; }
+    /// <summary>A fault the player must know about and act on: first in the queue (2 a session; later ones are normal).</summary>
+    public bool Urgent { get; init; }
+    /// <summary>Answers the player's own press (a hotkey, a command): honoured within 1 s of it, dropped if it can't show within 6 s.</summary>
+    public bool Reply { get; init; }
+    /// <summary>The text may name people: the log gets only your mod and the key.</summary>
+    public bool Private { get; init; }
+    /// <summary>Dropped once it could have shown for this long and didn't; 1 to 600, 0 = 120.</summary>
+    public int ExpireSeconds { get; init; }
+}
+
+/// <summary>
+/// One button in a prompt: the game's picture of it when the pad was used last, the key when the
+/// keyboard was. Use <see cref="Pad"/>, <see cref="Key"/> or <see cref="ForHotkey"/>.
+/// </summary>
+public sealed record Prompt
+{
+    public PadGlyph Glyph { get; init; }
+    /// <summary>The key, a Windows virtual-key code (0x20 for Space, 'R'); 0 = the glyph always.</summary>
+    public uint Vk { get; init; }
+    public KeyModifiers Modifiers { get; init; }
+    /// <summary>The key of one of your hotkeys: shows whatever it's bound to now (Glyph, Vk and Modifiers are ignored).</summary>
+    public string? Hotkey { get; init; }
+    /// <summary>What the button does ("Keep it"); ignored when <see cref="Word"/> is set.</summary>
+    public string? Label { get; init; }
+    /// <summary>The game's own word instead of <see cref="Label"/>, in the player's language.</summary>
+    public UiWord Word { get; init; }
+    /// <summary>"Hold" before it, with the hold fill (the HUD layer only).</summary>
+    public bool Hold { get; init; }
+
+    /// <summary>A controller button, with the key to show when the keyboard was used last (0: the button always).</summary>
+    public static Prompt Pad(PadGlyph glyph, string? label = null, uint vk = 0) => new() { Glyph = glyph, Vk = vk, Label = label };
+    /// <summary>A key, with the controller button to show when the pad was used last.</summary>
+    public static Prompt Key(uint vk, string? label = null, PadGlyph glyph = PadGlyph.None, KeyModifiers modifiers = KeyModifiers.None) =>
+        new() { Glyph = glyph, Vk = vk, Modifiers = modifiers, Label = label };
+    /// <summary>One of your hotkeys (<see cref="HotkeyOptions.Key"/>): whatever the player bound it to.</summary>
+    public static Prompt ForHotkey(string hotkeyKey, string? label = null) => new() { Hotkey = hotkeyKey, Label = label };
+}
+
+/// <summary>
+/// A tip: a pop-up with your mod's name as its title and a button in its line ("Press {button} to
+/// keep it"), shown once rather than every session (<see cref="Mod.ShowTip"/>).
+/// </summary>
+/// <param name="Key">Its seen key: once seen, it isn't shown again (see <see cref="Mod.TipSeen"/>).</param>
+/// <param name="Text">With "{button}" where the button goes; 45 characters in all.</param>
+public sealed record TipOptions(string Key, string Text)
+{
+    /// <summary>The button in the text; null for none (then the text needs no "{button}").</summary>
+    public Prompt? Button { get; init; }
+    /// <summary>Seconds of driving, with nothing else showing, before it shows; 0 = 60.</summary>
+    public int DelaySeconds { get; init; }
+    /// <summary>Seen only when you call <see cref="Mod.SetTipSeen"/> (the player did the thing), not when it's drawn.</summary>
+    public bool UntilDone { get; init; }
+    /// <summary>With <see cref="UntilDone"/>: shown in at most this many sessions; 0 = 1.</summary>
+    public int MaxSessions { get; init; }
+}
+
+/// <summary>
+/// The game's own message box over the page the player is on (<see cref="Mod.ShowMessageBox"/>):
+/// a title, a message, your choices, and Back, which the platform adds last.
+/// </summary>
+/// <param name="Key">Yours, to tell boxes apart.</param>
+/// <param name="Title">Shown in capitals; 30 characters.</param>
+/// <param name="Choices">1 to 99; put the safe one first, and no Back of your own.</param>
+public sealed record MessageBoxOptions(string Key, string Title, IReadOnlyList<string> Choices)
+{
+    /// <summary>Up to 200 characters, wrapped.</summary>
+    public string? Message { get; init; }
+    /// <summary>The choice the focus starts on.</summary>
+    public int Focus { get; init; }
+    /// <summary>
+    /// The choice picked (from 0), or <see cref="Back"/>, on the game's UI thread: keep it short. It may
+    /// never be called if the player leaves the box another way.
+    /// </summary>
+    public Action<int>? Chosen { get; init; }
+
+    /// <summary>What <see cref="Chosen"/> gets for Back (the item, or B).</summary>
+    public const int Back = -1;
+}

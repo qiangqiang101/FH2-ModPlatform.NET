@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.12.0 (preview)
+
+### New
+- **Everything platform 2.9.0 (API 10) adds, on `Mod`:**
+  - **Pop-ups:** `ShowPopup` with a picture, a sound, a key that replaces a waiting one, and urgent, reply and private pop-ups. `ClearPopup` takes them down. They go out under your mod's name.
+  - **Tips:** `ShowTip`, shown once, with a button in the text (`Prompt.Pad`, `Prompt.Key`, `Prompt.ForHotkey`). `TipSeen` and `SetTipSeen` too.
+  - **Message boxes:** `ShowMessageBox`, the game's own, with your choices, from a page's or setting's callback.
+  - **Sounds and status:** `PlaySound` (the game's UI sounds), `UiStatus`, and `DeclareUi` for a "Pop-ups" row of your own.
+  - **Page help:** `SetPageHelp`, `SetPageHints` and `ShowPageHint` for your pages' help bar and hint line.
+  - **Text in the player's language:** `AddTranslations` (PO files embedded in your mod), `AddTranslation`, `Tr`, `TrPlural`, `SetStringTr`, `SetSettingText`, `SetDescription`. Text from `Tr` passed to a row, page or hotkey follows the game's language by itself.
+  - **On `ModPlatform`:** `Language`, `GameLanguage`, `FormatNumber`, `FormatDate`.
+  - On an older platform they do nothing, and `Tr` gives back your English, so a mod using them still runs there.
+  - The wiki has two new pages: Pop-ups, tips and message boxes, and Translations.
+- **More of the game, from the FH2 mods (FH2 ANNA, ANNA-DroneMode, FnFNitro, FH2 Underglow, NoPause, Livery Layer Patch, XboxMusicRadio, Garage Size, VirtualDashboard's findings):**
+  - **`Vehicle`:** `Indicators` (left, right, hazards, held until you turn them off), `HeadlightsAutomatic`, part animations (`OpenPart`, `ClosePart`, `TogglePart`, `PlayAnimation`, `Animations`), `AiDriving` (the game's AI drives the route it's following), `Clutch`, `RedlineRpm`, `LimiterRpm`, `Boost`, `MediaName`, `Vehicle.FromHandle`.
+  - **`Camera`:** `Kind` (which camera is on), `Position`, `Forward`, `FovScale`, `ViewUpdated` (move or turn the driving cameras), `Group`, `ShowReplayShot`, `Flash`.
+  - **`Radio`** (new): the station, song and artist playing, `Changed`, `Next`, `Previous`.
+  - **`GameDb`** (new): rewrite the SQL the game runs, and answer string keys no table has, for custom upgrade parts.
+  - **`Livery`** (new): `SetLayerLimits`, up to 20,000 layers.
+  - **`Garage.SetCapacity`** and `Capacity`: more than 550 cars.
+  - **`World`:** `RouteToNearest` (an event, a bucket list, a road trip stop, a bonus board, a barn find), `LightLevel`.
+  - **`Game`:** `PauseOpened`, `EventStarted`, `ClearRewind`, `IsFeatureUnlocked`.
+  - **`Hud.HideAll`**: all of the game's UI, back by itself when the pause menu opens.
+  - **`GameWindow.KeepRunningUnfocused`**: the game, and the pad, keep going behind other windows.
+  - **`GameCode.NewStdString`**, for game functions that take a `std::string`.
+  - None of these have been tested in the game yet.
+
+### Changed
+- **Built on FH2 Mod Platform 2.9.0** (it was 2.8.0). The SDK's bindings cover its API 10.
+- **`Game.Language` asks the platform** on 2.9.0 or later, instead of reading the game's memory.
+- **`Vehicle.HeadlightsOn`** reads what the lights are now, the game's own choice included (it read only the setting a mod made), and holds what you set against the game's automatic lights.
+- **`UI.Notify` uses the platform's pop-ups on platform 2.9.0 or later:**
+  - The platform shows them, in one queue for every mod, spaced around the game's own notifications. The SDK's own hooks on the game's notification panel aren't put in, and those were behind both of 0.10.0's crashes.
+  - The title shows up to 28 characters and the line up to 45.
+  - Up to 4 wait at once (hosted mods together).
+  - The player can turn them off: a new **Pop-ups** row on Platform.NET's page, the platform's **Mod pop-ups**, or the game's Minor notifications.
+  - On older platforms, `UI.Notify` works as in 0.10.0.
+- **A mod built with 0.12.0 needs Platform.NET 0.12.0 or later** in the game, and says so in `platform.log` if it's older. Mods built with 0.9.0 to 0.11.0 keep working.
+
 ## 0.11.0 (preview)
 
 ### New

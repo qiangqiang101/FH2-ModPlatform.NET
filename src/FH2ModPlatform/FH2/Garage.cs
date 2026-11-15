@@ -1,3 +1,4 @@
+using FH2ModPlatform;
 using System.Runtime.InteropServices;
 
 namespace FH2;
@@ -81,6 +82,50 @@ public static unsafe class Garage
             var garage = RequireGarage();
             return ((delegate* unmanaged<nint, byte>)(Game.Base + Addresses.GarageIsFull.Offset))(garage) != 0;
         }
+    }
+
+    /// <summary>The game's own garage size: it's full at this many cars.</summary>
+    public const int GameCapacity = 550;
+
+    private static volatile int s_capacity = GameCapacity;
+    private static int s_capacitySet;
+
+    /// <summary>How many cars the garage holds: <see cref="GameCapacity"/>, or what <see cref="SetCapacity"/> made it. Any thread.</summary>
+    public static int Capacity => s_capacity;
+
+    /// <summary>
+    /// Makes the garage hold <paramref name="cars"/> (550 to 100,000) instead of the game's 550: the game's own check
+    /// (<see cref="IsFull"/>), adding a car, and the menus. Call it once, from OnInit; it applies as the game's code comes
+    /// in, all three places or none (platform.log says why). Any thread.
+    /// </summary>
+    /// <remarks>
+    /// The garage is a table in your profile, so only the number changes. Each car added saves the profile, and quitting
+    /// waits for every save (see <see cref="Add(CarInfo, int)"/>). With more than 550 cars and the change gone (another
+    /// session without it), you keep every car but can't add more.
+    /// </remarks>
+    public static void SetCapacity(int cars)
+    {
+        cars = Math.Clamp(cars, GameCapacity, 100_000);
+        if (cars == GameCapacity) return;
+        if (Interlocked.Exchange(ref s_capacitySet, 1) != 0)
+        {
+            Game.Log(ModPlatform.GameOwner, "Garage.SetCapacity: already set this session (a change needs a restart)");
+            return;
+        }
+        // Where the game has 550 (0x226): Garage::IsFull, the same check in AddCar, and the menus' list of limits.
+        // Each with the instruction before it, so a change can only land on this game build.
+        Patches.Edit[] edits =
+        [
+            new("Garage::IsFull", 0x2E7809, Patches.With("48 03 CB 48 81 F9", GameCapacity), Patches.With("48 03 CB 48 81 F9", cars)),
+            new("Garage::AddCar", 0x2CB6CE, Patches.With("48 03 C3 48 3D", GameCapacity), Patches.With("48 03 C3 48 3D", cars)),
+            new("the menus' limit", 0xD2A610, Patches.With("C3 B8", GameCapacity, "C3"), Patches.With("C3 B8", cars, "C3")),
+        ];
+        Patches.Apply("garage size", edits, ok =>
+        {
+            if (!ok) return;
+            s_capacity = cars;
+            Game.Log(ModPlatform.GameOwner, $"Garage: holds {cars} cars (the game's is {GameCapacity})");
+        });
     }
 
     /// <summary>Makes the car with <paramref name="garageId"/> your current car, as Pause > My Cars does.</summary>

@@ -13,7 +13,7 @@ public enum MouseButton { Left, Right, Middle, Back, Forward }
 /// read as they are (<see cref="Cursor"/>, <see cref="IsMouseDown"/>), and the wheel comes from a low-level hook
 /// (<see cref="MouseWheel"/>, started the first time it's subscribed to).
 /// </summary>
-public static unsafe class GameWindow
+public static unsafe partial class GameWindow
 {
     private static nint s_hwnd;
     private static nint s_origProc;
@@ -42,7 +42,7 @@ public static unsafe class GameWindow
         get
         {
             var h = Handle;
-            return h != 0 && GetForegroundWindow() == h;
+            return h != 0 && RealForeground() == h;
         }
     }
 
@@ -193,6 +193,7 @@ public static unsafe class GameWindow
     private static nint WndProc(nint h, uint msg, nint w, nint l)
     {
         // Alt alone opens the window's menu, which stalls the game.
+        if (s_keepRunning && IsLosingFocus(msg, w)) return 0;   // KeepRunningUnfocused
         if (msg == 0x112 /* WM_SYSCOMMAND */ && (w & 0xFFF0) == 0xF100 /* SC_KEYMENU */ && l == 0 && s_suppressAlt) return 0;
         if (msg == 0x20 /* WM_SETCURSOR */ && (l & 0xFFFF) == 1 /* HTCLIENT */ && s_showCursor is { } show &&
             Answer(show) is { } visible)
@@ -257,7 +258,7 @@ public static unsafe class GameWindow
 
     private static nint MouseHook(int code, nint w, nint l)
     {
-        if (code == 0 && w == 0x20A /* WM_MOUSEWHEEL */ && s_hwnd != 0 && GetForegroundWindow() == s_hwnd)
+        if (code == 0 && w == 0x20A /* WM_MOUSEWHEEL */ && s_hwnd != 0 && RealForeground() == s_hwnd)
         {
             var delta = (short)(((MSLLHOOKSTRUCT*)l)->MouseData >> 16);
             // Off the hook's thread: Windows wants an answer at once.

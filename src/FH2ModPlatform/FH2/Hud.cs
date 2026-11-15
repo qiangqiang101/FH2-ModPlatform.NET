@@ -15,7 +15,7 @@ namespace FH2;
 /// past the game's own numbers: set them with <see cref="SetGaugeItem"/> and bind your gauge (a bar's Ratio, a
 /// glow's angle, an Opacity) to them. Values are applied every HUD frame, so set them whenever you like.
 /// </remarks>
-public static unsafe class Hud
+public static unsafe partial class Hud
 {
     private static volatile bool s_ready;
     private static nint s_base;

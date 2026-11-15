@@ -11,10 +11,20 @@ namespace FH2;
 /// with a title and a line of text the game shows for skills and rewards), from any thread.
 /// </summary>
 /// <remarks>
-/// Notifications show one at a time, about 5 seconds apart, while the HUD is up (driving);
-/// ones that can't show within 2 minutes are dropped. The text goes to the game as UTF-16, so
-/// any language shows if the HUD's font for the game's language has its characters (Chinese
-/// with the game in Chinese, say). About 100 characters fit on a line.
+/// <para>
+/// From platform 2.9.0 (API 10), notifications are the platform's pop-ups: one queue for every mod,
+/// spaced around the game's own notifications, waiting while you're in a menu, loading or in photo
+/// mode, and dropped if they can't show within 2 minutes. The title shows up to 28 characters (in
+/// capitals) and the line up to 45; longer text is cut with "...". Up to 4 wait at once (for
+/// hosted mods, all of them together): a 5th drops the oldest. The player can turn them off: the
+/// "Pop-ups" row on Platform.NET's page (or a NativeAOT mod's own page), the platform's "Mod pop-ups",
+/// or the game's Minor notifications option.
+/// </para>
+/// <para>
+/// On older platforms the SDK shows them itself, one at a time, about 5 seconds apart, while you
+/// drive, with up to about 100 characters on each line. Either way the text can be any language,
+/// if the HUD's font for the game's language has its characters (Chinese with the game in Chinese, say).
+/// </para>
 /// </remarks>
 public static unsafe class UI
 {
@@ -37,6 +47,10 @@ public static unsafe class UI
     private static bool s_toldWaiting;
     private static int s_shown;
     private static volatile bool s_started, s_ready;
+    // The platform's pop-ups (API 10): declared at startup, and then none of the hooks below go in.
+    private static volatile bool s_toasts;
+    private const uint UsesToasts = 0x0001;    // FH2_UI_USES_TOASTS
+    private const uint StatusToasts = 0x0001;  // FH2_UI_TOASTS
 
     /// <summary>
     /// Shows <paramref name="title"/> with <paramref name="text"/> under it, as the game's HUD
@@ -45,6 +59,11 @@ public static unsafe class UI
     /// </summary>
     public static void Notify(string title, string text = "")
     {
+        if (s_toasts)
+        {
+            Toast(title, text);
+            return;
+        }
         Start();
         lock (s_lock)
         {
@@ -58,6 +77,8 @@ public static unsafe class UI
     {
         get
         {
+            if (s_toasts)
+                return ModPlatform.Api->UiStatus is null || (ModPlatform.Api->UiStatus(ModPlatform.GameOwner) & StatusToasts) != 0;
             Start();
             return s_ready;
         }
@@ -77,11 +98,45 @@ public static unsafe class UI
     /// Puts the hooks in now, at startup: the HUD's notification panel is made once, when the game builds its
     /// HUD, and hooks put in after that never see it (a first Notify would then show nothing).
     /// </summary>
-    internal static void Prepare() => Start();
+    /// <remarks>
+    /// On platform 2.9.0 or later this declares the platform's pop-ups instead, for whoever owns the FH2
+    /// classes' hooks (Platform.NET, or the NativeAOT mod itself): that has to happen during fh2mod_init,
+    /// which is when this runs.
+    /// </remarks>
+    internal static void Prepare()
+    {
+        var owner = ModPlatform.GameOwner;
+        if (owner is not null && ModPlatform.IsAttached && ModPlatform.Supports(ApiLevel.UiTemplates) &&
+            ModPlatform.Api->UiUses is not null && ModPlatform.Api->ShowToast is not null &&
+            ModPlatform.Api->UiUses(owner, UsesToasts) != 0)
+        {
+            s_toasts = true;
+            s_started = true;   // no hooks of our own
+            return;
+        }
+        Start();
+    }
+
+    // The platform's pop-up: it queues it, copies the text and logs what it shows (or why it can't).
+    private static void Toast(string title, string text)
+    {
+        title = Clean(title);
+        text = Clean(text);
+        if (title.Trim().Length == 0) (title, text) = (text, "");   // a pop-up needs a title
+        if (title.Trim().Length == 0) return;
+        using var u = new Utf8Scope();
+        var t = new FH2Toast
+        {
+            Size = (uint)sizeof(FH2Toast),
+            Title = u.Str(title),
+            Subtitle = text.Length == 0 ? null : u.Str(text),
+        };
+        ModPlatform.Api->ShowToast(ModPlatform.GameOwner, &t);
+    }
 
     private static void Start()
     {
-        if (s_started) return;
+        if (s_started || s_toasts) return;
         lock (s_lock)
         {
             if (s_started) return;
