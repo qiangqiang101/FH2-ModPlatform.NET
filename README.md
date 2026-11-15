@@ -206,6 +206,7 @@ Press **`~`** (the key left of 1) to open or close the console. You can rebind i
 
 - `platform.log` as it's written: every mod's lines (native and .NET) and the platform's own. Failures are in red, warnings in yellow, and .NET console output in green.
 - A prompt that runs any mod's command through the platform's command pipe: `list`, `HelloMod.NET hello you`, `reload MyMod`, `mods`, `cls`, `help`.
+- `log off` hides the log, so only what you type and the replies show; `log MyMod` shows only the lines with that text; `log on` shows it all again. The console remembers it (`FH2Console.ini`, beside it).
 
 The console runs as its own process, `fh2-mods\dotnet\FH2Console.exe`, so closing it can't close the game. It closes itself when the game does. You can also start it by hand while the game runs.
 

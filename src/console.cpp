@@ -6,6 +6,9 @@
 // on its own just as well (from fh2-mods\dotnet, or anywhere with --log). It
 //   - shows fh2-mods\platform.log as it's written: every mod's lines, the
 //     platform's, and .NET mods' Console/Debug output, with failures in red;
+//   - "log off" hides the log, so only what you type and the replies show;
+//     "log <text>" shows only the lines with that text (a mod's name, say);
+//     "log on" shows it all again. Kept in FH2Console.ini, beside it;
 //   - runs what you type as a command through the platform's pipe
 //     (\\.\pipe\fh2mod-<pid>): "list", "<mod> <command> [args]", plus
 //     "reload [mod]" and "mods" for hosted .NET mods;
@@ -29,6 +32,12 @@ std::mutex g_out;
 HANDLE g_con = nullptr;
 std::atomic<DWORD> g_pid{0};
 WORD g_key = 0;   // the console key (a virtual-key code): closes this window too
+
+// What of the log shows: all of it, none (only what you type and the replies), or the lines with g_filter in them.
+enum class LogShow { All, None, Matching };
+LogShow g_show = LogShow::All;   // under g_out
+std::wstring g_filter;           // under g_out, lowercase
+std::wstring g_ini;              // FH2Console.ini, beside the exe
 
 enum Color : WORD {
     kNormal = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
@@ -95,9 +104,22 @@ bool contains_ci(const std::wstring& hay, const wchar_t* needle) {
     return h.find(n) != std::wstring::npos;
 }
 
+// Whether `log` lets a line through (g_out held).
+bool log_shows(const std::wstring& line) {
+    if (g_show == LogShow::All) return true;
+    if (g_show == LogShow::None) return false;
+    std::wstring l = line;
+    for (auto& c : l) c = static_cast<wchar_t>(towlower(c));
+    return l.find(g_filter) != std::wstring::npos;
+}
+
 // A log line, coloured by what it says.
 void print_log_line(const std::string& utf8) {
     const std::wstring line = widen(utf8);
+    {
+        std::scoped_lock lk{g_out};
+        if (!log_shows(line)) return;
+    }
     WORD c = kNormal;
     if (contains_ci(line, L"failed") || contains_ci(line, L"crash") || contains_ci(line, L"exception") ||
         contains_ci(line, L"error"))
@@ -258,10 +280,39 @@ void help() {
           L"  <mod> <command> [args]    run one, like: HelloMod.NET hello you\n"
           L"  reload [mod]              start a rebuilt hosted .NET mod again (all of them without a name)\n"
           L"  mods                      the hosted .NET mods and what they're doing\n"
+          L"  log off | on | <text>     hide the log (only what you type shows), show it, or only lines with <text>\n"
           L"  cls                       clear the window\n"
           L"  help                      this\n"
           L"Up and Down go through what you typed; the console key (~ unless you changed it) closes this window.\n",
           kCyan);
+}
+
+void load_log_setting() {
+    wchar_t v[256] = L"";
+    GetPrivateProfileStringW(L"Console", L"Log", L"on", v, 256, g_ini.c_str());
+    std::wstring s = v;
+    for (auto& c : s) c = static_cast<wchar_t>(towlower(c));
+    if (s == L"off") g_show = LogShow::None;
+    else if (s.empty() || s == L"on") g_show = LogShow::All;
+    else g_show = LogShow::Matching, g_filter = s;
+}
+
+// "log off", "log on", "log <text>": what of the log shows from now on.
+void set_log(const std::wstring& arg) {
+    std::wstring a = arg;
+    for (auto& c : a) c = static_cast<wchar_t>(towlower(c));
+    std::wstring said, saved;
+    {
+        std::scoped_lock lk{g_out};
+        if (a == L"off" || a == L"hide") g_show = LogShow::None, saved = L"off",
+            said = L"the log is hidden: only what you type and the replies show (log on shows it again)";
+        else if (a.empty() || a == L"on" || a == L"all" || a == L"show") g_show = LogShow::All, saved = L"on",
+            said = L"the log shows again";
+        else g_show = LogShow::Matching, g_filter = a, saved = a,
+            said = L"the log shows only lines with \"" + arg + L"\" (log on shows it all)";
+    }
+    WritePrivateProfileStringW(L"Console", L"Log", saved.c_str(), g_ini.c_str());
+    print(said + L"\n", kCyan);
 }
 
 BOOL WINAPI on_ctrl(DWORD type) {
@@ -289,6 +340,15 @@ int wmain(int argc, wchar_t** argv) {
         log_path = dir + L"\\platform.log";
     }
 
+    {
+        wchar_t self[MAX_PATH * 2];
+        const DWORD n = GetModuleFileNameW(nullptr, self, static_cast<DWORD>(std::size(self)));
+        std::wstring dir(self, n);
+        dir.resize(dir.find_last_of(L"\\/") == std::wstring::npos ? 0 : dir.find_last_of(L"\\/"));
+        g_ini = dir + L"\\FH2Console.ini";
+        load_log_setting();
+    }
+
     g_con = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleCtrlHandler(on_ctrl, TRUE);
     SetConsoleCP(CP_UTF8);
@@ -301,6 +361,8 @@ int wmain(int argc, wchar_t** argv) {
 
     print(L"FH2 Mod Platform console: " + log_path + L"\n", kCyan);
     help();
+    if (g_show == LogShow::None) print(L"(the log is hidden: log on shows it)\n", kDim);
+    else if (g_show == LogShow::Matching) print(L"(the log shows only lines with \"" + g_filter + L"\": log on shows it all)\n", kDim);
     std::thread(tail, log_path).detach();
 
     if (g_pid) {
@@ -381,6 +443,12 @@ int wmain(int argc, wchar_t** argv) {
         for (auto& c : lower) c = static_cast<wchar_t>(towlower(c));
         if (lower == L"help" || lower == L"?") {
             help();
+            continue;
+        }
+        if (lower == L"log" || lower.rfind(L"log ", 0) == 0) {
+            std::wstring arg = line.size() > 3 ? line.substr(4) : L"";
+            while (!arg.empty() && arg.front() == L' ') arg.erase(0, 1);
+            set_log(arg);
             continue;
         }
         if (lower == L"cls" || lower == L"clear") {

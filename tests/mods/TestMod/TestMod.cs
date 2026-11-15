@@ -28,9 +28,9 @@ public sealed class TestMod : Mod
         DeclareUi(UiUses.Popups | UiUses.Tips);
         ShowPopup(new PopupOptions("Own pop-up") { Text = "with an icon", Icon = PopupIcon.Trophy, Sound = UiSound.Notify, Key = "own", Urgent = true });
         ClearPopup("own");
-        ShowTip(new TipOptions("tip.reload", "Press {button} to reload") { Button = Prompt.Pad(PadGlyph.Y, "Reload", 0x52), DelaySeconds = 5 });
-        Log($"tip seen: {TipSeen("tip.reload")}");
-        SetTipSeen("tip.reload");
+        ShowTip(new TipOptions("tip_reload", "Press {button} to reload") { Button = Prompt.Pad(PadGlyph.Y, "Reload", 0x52), DelaySeconds = 5 });
+        Log($"tip seen: {TipSeen("tip_reload")}");
+        SetTipSeen("tip_reload");
         PlaySound(UiSound.Select);
         Log($"ui status: {UiStatus}");
         SetStringTr("Main.str", 0x1234, "str.hello", "Hello");

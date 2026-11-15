@@ -25,13 +25,19 @@ public static unsafe partial class World
 {
     private static nint s_nav;   // the CareerNavigationModule, caught as it's made
     private static void** s_navCtorSlot, s_navDtorSlot;
-    private static int s_navState;   // 0 not yet, 1 hooked, -1 off
+    private static int s_navState;   // 0 not asked for, 1 hooked, -1 off
+    private static bool s_toldPrepare;
 
     /// <summary>
-    /// Puts in the navigation module's hooks at startup: the game makes the module once, as it loads your career, and
-    /// hooks put in after that never see it.
+    /// Call it from OnInit if you use <see cref="RouteToNearest"/>: it hooks the game's navigation module as the game
+    /// starts (the game makes the module once, as it loads your career, and a hook put in later never sees it).
+    /// Any thread.
     /// </summary>
-    internal static void PrepareNavigation()
+    /// <remarks>
+    /// Only mods that ask for it get the hook: FH2 ANNA hooks the same function, and checks its code first, so with the
+    /// SDK's hook in before it, ANNA turns its own routes off.
+    /// </remarks>
+    public static void PrepareRoutes()
     {
         if (Interlocked.CompareExchange(ref s_navState, 1, 0) != 0) return;
         new Thread(() =>
@@ -85,13 +91,19 @@ public static unsafe partial class World
         Game.IsReady && GameCode.TryRead<float>(Game.Base + Addresses.ZoneLightGlobal, out var v) && float.IsFinite(v) ? v : -1;
 
     /// <summary>
-    /// Sets the GPS route to the nearest <paramref name="destination"/>, as ANNA's voice commands did. False if there's
-    /// none (no bonus board left), or the game's navigation isn't there (still loading). Game thread only.
+    /// Sets the GPS route to the nearest <paramref name="destination"/>, as ANNA's voice commands did. Call
+    /// <see cref="PrepareRoutes"/> from OnInit first. False if there's none (no bonus board left), if PrepareRoutes
+    /// wasn't called, or if the game's navigation isn't there (still loading). Game thread only.
     /// </summary>
     public static bool RouteToNearest(Destination destination)
     {
         Game.RequireGameThread("World.RouteToNearest");
         var nav = s_nav;
+        if (s_navState == 0 && !s_toldPrepare)
+        {
+            s_toldPrepare = true;
+            Game.Log(ModPlatform.GameOwner, "World.RouteToNearest: call World.PrepareRoutes() from OnInit first");
+        }
         if (s_navState != 1 || nav == 0) return false;
         var b = Game.Base;
         switch (destination)

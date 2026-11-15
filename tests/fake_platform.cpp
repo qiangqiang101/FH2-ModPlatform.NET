@@ -10,6 +10,7 @@
 
 #include <windows.h>
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -198,6 +199,14 @@ int api_add_command(FH2Mod* m, const char* name, const char* help, FH2CommandFn 
     return 1;
 }
 
+// The platform's rule for pop-up and tip keys: up to 32 letters, digits and '_' (null where a key may be left out).
+bool usable_key(const char* k, bool may_be_null) {
+    if (!k) return may_be_null;
+    size_t n = 0;
+    for (; k[n]; ++n)
+        if (n >= 32 || !(std::isalnum(static_cast<unsigned char>(k[n])) || k[n] == '_')) return false;
+    return n > 0;
+}
 // API 10: pop-ups, as far as the SDK uses them (UI.Notify).
 int api_ui_uses(FH2Mod* m, uint32_t uses) {
     std::printf("[platform] %s ui_uses 0x%X\n", nm(m), uses);
@@ -206,6 +215,7 @@ int api_ui_uses(FH2Mod* m, uint32_t uses) {
 uint32_t api_ui_status(FH2Mod*) { return FH2_UI_TOASTS; }
 int api_show_toast(FH2Mod* m, const FH2Toast* t) {
     if (!t || t->size < offsetof(FH2Toast, icon) || !t->title) return 0;
+    if (t->size >= offsetof(FH2Toast, icon) && !usable_key(t->key, true)) return std::printf("[platform] %s show_toast: \"%s\" isn't a usable key\n", nm(m), t->key), 0;
     const bool whole = t->size >= sizeof(FH2Toast);
     std::printf("[platform] %s show_toast \"%s\" / \"%s\" icon %u sound %u flags %u key %s\n", nm(m), t->title, S(t->subtitle),
                 whole ? t->icon : 0, whole ? t->sound : 0, whole ? t->flags : 0, S(t->key));
@@ -251,12 +261,15 @@ int api_play_ui_sound(FH2Mod* m, uint32_t sound) { std::printf("[platform] %s pl
 void api_clear_toast(FH2Mod* m, const char* key) { std::printf("[platform] %s clear_toast %s\n", nm(m), S(key)); }
 int api_show_tip(FH2Mod* m, const FH2Tip* t) {
     if (!t || t->size < sizeof(FH2Tip)) return 0;
+    if (!usable_key(t->key, true)) return std::printf("[platform] %s show_tip: \"%s\" isn't a usable key\n", nm(m), t->key), 0;
     std::printf("[platform] %s show_tip %s \"%s\" glyph %u vk 0x%X label %s delay %u flags %u\n", nm(m), S(t->key), S(t->text),
                 t->button.glyph, t->button.vk, S(t->button.label), t->delay_s, t->flags);
     return 1;
 }
 int api_tip_seen(FH2Mod* m, const char* key) { std::printf("[platform] %s tip_seen %s\n", nm(m), S(key)); return 0; }
-void api_set_tip_seen(FH2Mod* m, const char* key, int seen) { std::printf("[platform] %s set_tip_seen %s %d\n", nm(m), S(key), seen); }
+void api_set_tip_seen(FH2Mod* m, const char* key, int seen) {
+    if (!usable_key(key, false)) { std::printf("[platform] %s set_tip_seen: \"%s\" isn't a usable key\n", nm(m), S(key)); return; }
+    std::printf("[platform] %s set_tip_seen %s %d\n", nm(m), S(key), seen); }
 int api_show_message_box(FH2Mod* m, const FH2MessageBox* b) {
     if (!b || b->size < sizeof(FH2MessageBox) || !b->choice_count) return 0;
     std::printf("[platform] %s show_message_box %s \"%s\" \"%s\" %u choices, first \"%s\", focus %u\n", nm(m), S(b->key), S(b->title),

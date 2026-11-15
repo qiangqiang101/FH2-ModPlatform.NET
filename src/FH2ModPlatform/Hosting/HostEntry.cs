@@ -68,7 +68,6 @@ public static unsafe partial class HostEntry
             ModPlatform.GameOwner = host;
             // Before the game builds its HUD: notifications need to see its notification panel being made.
             FH2.UI.Prepare();
-            FH2.World.PrepareNavigation();   // the game makes its navigation module once, early
             // Every hosted mod shares this runtime, so their Console output is the host's to log.
             LogWriter.Redirect(Log);
             s_modsDir = new string(modsDir);

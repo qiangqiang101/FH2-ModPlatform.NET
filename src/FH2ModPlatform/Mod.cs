@@ -168,7 +168,6 @@ public abstract unsafe partial class Mod
         {
             ModPlatform.GameOwner = _handle;   // a NativeAOT mod's own (hosted ones already have the host's)
             FH2.UI.Prepare();                  // before the game builds its HUD (see UI.Prepare)
-            FH2.World.PrepareNavigation();     // before the game makes its navigation module
         }
         Registered?.Invoke();
         return RunInit();

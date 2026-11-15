@@ -106,9 +106,9 @@ expect 'add_setting Volume "T[row.Volume.label]Volume" (label from tr)'
 expect "TestMod.NET ui_uses 0x3"
 expect 'TestMod.NET show_toast "Own pop-up" / "with an icon" icon 1 sound 6 flags 1 key own'
 expect "TestMod.NET clear_toast own"
-expect 'TestMod.NET show_tip tip.reload "Press {button} to reload" glyph 4 vk 0x52 label Reload delay 5 flags 0'
+expect 'TestMod.NET show_tip tip_reload "Press {button} to reload" glyph 4 vk 0x52 label Reload delay 5 flags 0'
 expect "tip seen: False"
-expect "TestMod.NET set_tip_seen tip.reload 1"
+expect "TestMod.NET set_tip_seen tip_reload 1"
 expect "TestMod.NET play_ui_sound 1"
 expect "ui status: Popups"
 expect 'TestMod.NET set_string_tr Main.str 0x1234 str.hello "Hello"'

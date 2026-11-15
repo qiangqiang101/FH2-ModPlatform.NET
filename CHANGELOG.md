@@ -20,15 +20,16 @@
   - **`GameDb`** (new): rewrite the SQL the game runs, and answer string keys no table has, for custom upgrade parts.
   - **`Livery`** (new): `SetLayerLimits`, up to 20,000 layers.
   - **`Garage.SetCapacity`** and `Capacity`: more than 550 cars.
-  - **`World`:** `RouteToNearest` (an event, a bucket list, a road trip stop, a bonus board, a barn find), `LightLevel`.
+  - **`World`:** `RouteToNearest` (an event, a bucket list, a road trip stop, a bonus board, a barn find; call `PrepareRoutes` from `OnInit` first), `LightLevel`.
   - **`Game`:** `PauseOpened`, `EventStarted`, `ClearRewind`, `IsFeatureUnlocked`.
   - **`Hud.HideAll`**: all of the game's UI, back by itself when the pause menu opens.
   - **`GameWindow.KeepRunningUnfocused`**: the game, and the pad, keep going behind other windows.
   - **`GameCode.NewStdString`**, for game functions that take a `std::string`.
-  - None of these have been tested in the game yet.
+  - Tested in the game with the Test012 script, except `GameDb`, `Garage.SetCapacity` and `Livery.SetLayerLimits` (their own mods do the same today).
 
 ### Changed
 - **Built on FH2 Mod Platform 2.9.0** (it was 2.8.0). The SDK's bindings cover its API 10.
+- **The console's `log` command:** `log off` hides the log, so only what you type and the replies show; `log <text>` shows only lines with that text; `log on` shows it all. It's remembered.
 - **`Game.Language` asks the platform** on 2.9.0 or later, instead of reading the game's memory.
 - **`Vehicle.HeadlightsOn`** reads what the lights are now, the game's own choice included (it read only the setting a mod made), and holds what you set against the game's automatic lights.
 - **`UI.Notify` uses the platform's pop-ups on platform 2.9.0 or later:**

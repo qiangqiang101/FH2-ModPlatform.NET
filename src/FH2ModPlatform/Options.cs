@@ -121,7 +121,7 @@ public sealed record PopupOptions(string Title)
 {
     /// <summary>The line under the title; 45 characters.</summary>
     public string? Text { get; init; }
-    /// <summary>Letters, digits and '_': a new pop-up with the same key replaces your waiting one. Null: never replaced.</summary>
+    /// <summary>Up to 32 letters, digits and '_': a new pop-up with the same key replaces your waiting one. Null: never replaced.</summary>
     public string? Key { get; init; }
     public PopupIcon Icon { get; init; }
     /// <summary>A sound as it appears; none by default, as the game's own pop-ups.</summary>
@@ -168,7 +168,7 @@ public sealed record Prompt
 /// A tip: a pop-up with your mod's name as its title and a button in its line ("Press {button} to
 /// keep it"), shown once rather than every session (<see cref="Mod.ShowTip"/>).
 /// </summary>
-/// <param name="Key">Its seen key: once seen, it isn't shown again (see <see cref="Mod.TipSeen"/>).</param>
+/// <param name="Key">Its seen key, up to 32 letters, digits and '_' ("tip_boost"): once seen, it isn't shown again (see <see cref="Mod.TipSeen"/>).</param>
 /// <param name="Text">With "{button}" where the button goes; 45 characters in all.</param>
 public sealed record TipOptions(string Key, string Text)
 {
